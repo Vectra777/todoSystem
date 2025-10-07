@@ -77,3 +77,27 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* Dark mode toggled via the .dark-mode class on the root element */
+:root.dark-mode, .dark-mode {
+  color-scheme: dark;
+  color: #e6eef8;
+  background-color: #0b1220;
+}
+
+/* Example overrides to make Bootstrap-based components adapt */
+.dark-mode a {
+  color: #9fb7ff;
+}
+.dark-mode a:hover {
+  color: #cfe2ff;
+}
+.dark-mode button {
+  background-color: #162233;
+  color: #e6eef8;
+}
+
+/* Invert the vertical rule color in dark mode */
+.dark-mode .vr {
+  border-left-color: #334a5e;
+}
