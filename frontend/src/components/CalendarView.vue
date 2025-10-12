@@ -7,6 +7,9 @@
 				<button class="btn btn-sm btn-outline-secondary" @click="goToNextMonth" title="Next month">▶</button>
 			</div>
 			<h4 class="m-0 flex-grow-1 text-center">{{ monthLabel }}</h4>
+			<div>
+				<button class="btn btn-sm" :class="detailed ? 'btn-primary' : 'btn-outline-secondary'" @click="detailed = !detailed">{{ detailed ? 'Detailed' : 'Compact' }}</button>
+			</div>
 			<div class="small text-muted text-end legend-wrapper" style="min-width:260px">Legend:
 				<span class="legend-pill start">Start</span>
 				<span class="legend-pill span">Span</span>
@@ -27,15 +30,21 @@
 			>
 				<div class="date-number">{{ cell.date.getDate() }}</div>
 				<div class="tasks-list">
-					<div
-						v-for="t in cell.tasks"
-						:key="t.id + ':' + t.__marker"
-						class="task-chip"
-						:class="t.__marker"
-						:title="taskChipTitle(t)"
-						@click="$emit('edit-task', originalTask(t))"
-					>
-						<span class="truncate">{{ t.title }}</span>
+					<div v-if="!detailed">
+						<div
+							v-for="t in cell.tasks"
+							:key="t.id + ':' + t.__marker"
+							class="task-chip"
+							:class="t.__marker"
+							:title="taskChipTitle(t)"
+						>
+							<span class="truncate">{{ t.title }}</span>
+						</div>
+					</div>
+					<div v-else>
+						<div v-for="t in cell.tasks" :key="t.id + ':' + t.__marker" class="mb-2">
+							<CompetenceCard :item="t" />
+						</div>
 					</div>
 				</div>
 			</div>
@@ -44,14 +53,12 @@
 		<div v-if="tasksWithoutDates.length" class="mt-3">
 			<details>
 				<summary class="fw-semibold">Tasks without dates ({{ tasksWithoutDates.length }})</summary>
-				<div class="d-flex flex-wrap gap-2 mt-2">
-					<div
-						v-for="t in tasksWithoutDates"
-						:key="t.id"
-						class="task-chip no-date"
-						@click="$emit('edit-task', t)"
-					>
-						{{ t.title }}
+				<div v-if="!detailed" class="d-flex flex-wrap gap-2 mt-2">
+					<div v-for="t in tasksWithoutDates" :key="t.id" class="task-chip no-date">{{ t.title }}</div>
+				</div>
+				<div v-else class="d-flex flex-wrap gap-2 mt-2">
+					<div v-for="t in tasksWithoutDates" :key="t.id" class="mb-2">
+						<CompetenceCard :item="t" />
 					</div>
 				</div>
 			</details>
@@ -61,11 +68,14 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
+import CompetenceCard from './CompetenceCard.vue'
 
 const props = defineProps({
 	tasks: { type: Array, default: () => [] }
 })
-defineEmits(['edit-task'])
+// read-only calendar: no edit emits
+
+const detailed = ref(false)
 
 // State for displayed month (year, month index)
 const shownYear = ref(new Date().getUTCFullYear())
@@ -206,7 +216,7 @@ function originalTask(chipTask) {
 <style scoped>
 .calendar-wrapper {
 	background: var(--bs-body-bg);
-	border: 1px solid var(--bs-border-color, #dee2e6);
+	border: 1px solid var(--bs-border-color);
 	border-radius: .5rem;
 	padding: 1rem;
 }
@@ -223,11 +233,11 @@ function originalTask(chipTask) {
 	font-size: .85rem;
 	text-transform: uppercase;
 }
+
 .day-cell {
 	position: relative;
 	min-height: 110px;
-	background: var(--bs-tertiary-bg, #f8f9fa);
-	border: 1px solid var(--bs-border-color, #dee2e6);
+	border: 1px solid var(--bs-border-color);
 	border-radius: .35rem;
 	padding: .25rem .25rem .5rem;
 	display: flex;
@@ -238,15 +248,15 @@ function originalTask(chipTask) {
 .day-cell.today { outline: 2px solid var(--bs-primary); outline-offset: -2px; }
 .date-number { font-size: .8rem; font-weight: 600; margin-bottom: .25rem; }
 .tasks-list { display: flex; flex-direction: column; gap: 2px; overflow: auto; }
-.task-chip { cursor: pointer; padding: 2px 4px; border-radius: 4px; font-size: .65rem; line-height: 1.2; font-weight: 500; background: var(--bs-secondary-bg, #e9ecef); color: var(--bs-emphasis-color, #212529); border-left: 4px solid var(--bs-secondary, #6c757d); }
-.task-chip.start { border-left-color: #0d6efd; background: color-mix(in oklab, #0d6efd 18%, white); }
-.task-chip.span { border-left-color: #0aa27f; background: color-mix(in oklab, #0aa27f 18%, white); }
-.task-chip.end { border-left-color: #dc3545; background: color-mix(in oklab, #dc3545 18%, white); }
-.task-chip.no-date { border-left-color: #6f42c1; background: color-mix(in oklab, #6f42c1 20%, white); }
+.task-chip { cursor: pointer; padding: 2px 4px; border-radius: 4px; font-size: .65rem; line-height: 1.2; font-weight: 500; background: var(--bs-secondary-bg); color: var(--bs-emphasis-color); border-left: 4px solid var(--bs-secondary); }
+.task-chip.start { border-left-color: var(--bs-primary); background: var(--bs-primary-bg-subtle); }
+.task-chip.span { border-left-color: var(--bs-success); background: var(--bs-success-bg-subtle); }
+.task-chip.end { border-left-color: var(--bs-danger); background: var(--bs-danger-bg-subtle); }
+.task-chip.no-date { border-left-color: var(--bs-indigo); background: var(--bs-indigo-bg-subtle); }
 .legend-wrapper .legend-pill { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: .65rem; margin-left: 4px; border-left: 4px solid; background: var(--bs-tertiary-bg); }
-.legend-pill.start { border-left-color: #0d6efd; }
-.legend-pill.span { border-left-color: #0aa27f; }
-.legend-pill.end { border-left-color: #dc3545; }
+.legend-pill.start { border-left-color: var(--bs-primary); }
+.legend-pill.span { border-left-color: var(--bs-success); }
+.legend-pill.end { border-left-color: var(--bs-danger); }
 .task-chip:hover { filter: brightness(0.95); }
 .truncate { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

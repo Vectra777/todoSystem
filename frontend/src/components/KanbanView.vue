@@ -12,7 +12,7 @@
     >
       <h4 class="text-center text-capitalize">{{ status }}</h4>
       <div v-for="task in tasksByStatus(status)" :key="task.id">
-        <TaskCard :task="task" @edit="() => $emit('edit-task', task)" @delete="t => $emit('delete-task', t)" />
+  <CompetenceCard :item="task" />
       </div>
     </div >
   </div>
@@ -20,7 +20,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import TaskCard from './TaskCard.vue'
+import CompetenceCard from './CompetenceCard.vue'
 const props = defineProps({ tasks: Array })
 const emit = defineEmits(['edit-task', 'delete-task', 'move-task'])
 const statuses = ['to do', 'doing', 'finished', 'validated']
