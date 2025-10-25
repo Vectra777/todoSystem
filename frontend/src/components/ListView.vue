@@ -31,7 +31,7 @@
     <!-- Detailed: competence cards -->
     <div v-else class="row g-3">
       <div v-for="task in tasks" :key="task.id" class="col-12 col-md-6">
-        <CompetenceCard :item="task" />
+        <CompetenceCard :item="task" @open="$emit('open-task', task)" />
       </div>
     </div>
   </div>
@@ -42,7 +42,7 @@ import { ref } from 'vue'
 import CompetenceCard from './CompetenceCard.vue'
 
 const props = defineProps({ tasks: Array })
-// Read-only list view: no emitters
+const emit = defineEmits(['open-task'])
 
 const detailed = ref(false)
 </script>

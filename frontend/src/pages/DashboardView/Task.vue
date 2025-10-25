@@ -24,10 +24,15 @@
       :is="currentViewComponent"
       :tasks="filteredTasks"
       @move-task="handleMoveTask"
+      @open-task="handleOpenTask"
     />
-   
-
-
+    <TaskForm
+      v-if="selectedTask"
+      :task="selectedTask"
+      :readonly="!userStore.isAdmin"
+      @close="selectedTask = null"
+      @save="handleSaveTask"
+    />
   </div>
 </template>
 
@@ -38,7 +43,9 @@ import KanbanView from '../../components/KanbanView.vue'
 import ListView from '../../components/ListView.vue'
 import CalendarView from '../../components/CalendarView.vue'
 import Filters from '../../components/Filters.vue'
+import TaskForm from '../../components/TaskForm.vue'
 import { useTasksStore } from '../../stores/tasks'
+import { useUserStore } from '../../stores/user'
 
 const view = ref('kanban')
 
@@ -50,6 +57,9 @@ const filters = ref({
 
 const tasksStore = useTasksStore()
 const { tasks } = storeToRefs(tasksStore)
+const userStore = useUserStore()
+
+const selectedTask = ref(null)
 
 const currentViewComponent = computed(() => {
   return view.value === 'kanban'
@@ -96,7 +106,21 @@ async function handleMoveTask({ id, toStatus }) {
 
 onMounted(() => {
   tasksStore.initialize()
+  userStore.initialize()
 })
+
+function handleOpenTask(task) {
+  selectedTask.value = { ...task }
+}
+
+async function handleSaveTask(updated) {
+  try {
+    await tasksStore.updateTask(updated.id, updated)
+    selectedTask.value = null
+  } catch (e) {
+    alert('Failed to save: ' + (e?.message || e))
+  }
+}
 </script>
 
 <style>
@@ -109,3 +133,4 @@ onMounted(() => {
 }
 
 </style>
+

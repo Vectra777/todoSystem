@@ -1,6 +1,6 @@
 <template>
   <div class="competence-card-wrapper">
-    <div class="rounded-4 p-4 text-center shadow-sm competence-card grabbable border" draggable="true" @dragstart="onDragStart">
+    <div class="rounded-4 p-4 text-center shadow-sm competence-card grabbable border card" draggable="true" @dragstart="onDragStart">
   <h3 class="fw-bold fs-6">{{ itemObj.title }}</h3>
   <p class="mb-2 small text-muted">{{ itemObj.content }}</p>
 
@@ -9,7 +9,7 @@
         <div v-if="formattedEnd">⏳ End: {{ formattedEnd }}</div>
       </div>
 
-      <div class="my-3">
+      <div class="my-3" v-if="userStore.isAdmin">
         <div class="progress-circle position-relative d-inline-block my-3" style="width: 80px; height: 80px;">
           <svg viewBox="0 0 100 100" width="80" height="80">
             <circle cx="50" cy="50" r="45" stroke="#e6e6e6" stroke-width="6" fill="none" />
@@ -32,13 +32,22 @@
       </div>
 
   <div class="mb-2"><span class="badge bg-secondary">{{ itemObj.label }}</span></div>
-      <button class="btn btn-info text-white w-100 rounded-pill">Voir</button>
+  <button class="btn btn-info text-white w-100 rounded-pill" @click.stop="openDetails">Voir</button>
     </div>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import { useUserStore } from '../stores/user'
+
+const userStore = useUserStore()
+
+userStore.initialize()
+
+
+
+const emit = defineEmits(['open'])
 
 const props = defineProps({
   item: { type: Object, required: true }
@@ -88,6 +97,10 @@ function onDragStart(e) {
   e.dataTransfer.effectAllowed = 'move'
   e.dataTransfer.setData('text/plain', String(props.item?.id))
 }
+
+function openDetails() {
+  emit('open', { ...itemObj.value })
+}
 </script>
 
 <style scoped>
@@ -96,9 +109,7 @@ function onDragStart(e) {
   justify-content: center;
   padding: 0.5rem 0;
 }
-.competence-card {
-  width: 12rem; /* fixed width so cards are centered and uniform in Kanban columns */
-}
+
 .grabbable {
   cursor: grab;
 }

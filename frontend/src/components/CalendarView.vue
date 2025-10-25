@@ -43,7 +43,7 @@
 					</div>
 					<div v-else>
 						<div v-for="t in cell.tasks" :key="t.id + ':' + t.__marker" class="mb-2">
-							<CompetenceCard :item="t" />
+							<CompetenceCard :item="t" @open="$emit('open-task', t)" />
 						</div>
 					</div>
 				</div>
@@ -58,7 +58,7 @@
 				</div>
 				<div v-else class="d-flex flex-wrap gap-2 mt-2">
 					<div v-for="t in tasksWithoutDates" :key="t.id" class="mb-2">
-						<CompetenceCard :item="t" />
+						<CompetenceCard :item="t" @open="$emit('open-task', t)" />
 					</div>
 				</div>
 			</details>
@@ -74,6 +74,7 @@ const props = defineProps({
 	tasks: { type: Array, default: () => [] }
 })
 // read-only calendar: no edit emits
+const emit = defineEmits(['open-task'])
 
 const detailed = ref(false)
 

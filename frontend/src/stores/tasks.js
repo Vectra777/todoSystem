@@ -121,6 +121,13 @@ export const useTasksStore = defineStore('tasks', {
       if (index === -1) return
       this.items[index] = { ...snapshot }
       this.saveSnapshot()
+    },
+    updateTask(id, partial) {
+      const index = this.items.findIndex((task) => String(task.id) === String(id))
+      if (index === -1) throw new Error('Task not found')
+      this.items[index] = { ...this.items[index], ...partial, id: this.items[index].id }
+      this.saveSnapshot()
+      return this.items[index]
     }
   }
 })
