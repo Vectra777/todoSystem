@@ -1,6 +1,6 @@
 <template>
   <div class="competence-card-wrapper">
-    <div class="rounded-4 p-4 text-center shadow-sm competence-card grabbable border card" draggable="true" @dragstart="onDragStart">
+    <div class="rounded-4 p-4 text-center shadow-sm competence-card grabbable border container" draggable="true" @dragstart="onDragStart">
   <h3 class="fw-bold fs-6">{{ itemObj.title }}</h3>
   <p class="mb-2 small text-muted">{{ itemObj.content }}</p>
 
