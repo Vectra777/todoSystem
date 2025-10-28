@@ -125,12 +125,9 @@ async function handleSaveTask(updated) {
 
 <style>
 .home-page {
-  height: 100vh;
-
-  justify-content: center;
-  align-items: center;
+  flex-grow: 1; 
   padding: 20px;
-}
 
+}
 </style>
 
