@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white rounded-4 p-4 shadow-sm">
+  <div class="bg-body rounded-4 p-4 shadow-sm">
     <h2 class="text-center fs-5 mb-3">The Teams</h2>
 
     <template v-for="(team, index) in teams" :key="team.id">

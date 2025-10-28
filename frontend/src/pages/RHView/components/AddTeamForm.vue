@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white rounded-4 p-4 shadow-sm">
+  <div class="bg-body rounded-4 p-4 shadow-sm">
     <h2 class="mb-3 text-center fs-5">Add Team</h2>
     <div class="d-flex gap-2 mb-3">
       <input type="text" class="form-control" placeholder="Team name" />
