@@ -3,24 +3,22 @@
     <h2 class="text-center fs-5 mb-3">The Teams</h2>
 
     <template v-for="(team, index) in teams" :key="team.id">
-      <div class="border-bottom">
-        <div
-          class="row align-items-center bg-body p-3 gx-2"
-          style="cursor: pointer"
-          @click="toggleTeam(index)"
-        >
-          <div class="col-12 col-md-3 mb-1 mb-md-0">{{ team.name }}</div>
-          <div class="col-12 col-md-3 mb-1 mb-md-0">
-            {{ team.employees }} employees
-          </div>
-          <div class="col-12 col-md-3 mb-1 mb-md-0">
-            {{ team.skills }} competences
-          </div>
-          <div class="col-12 col-md-3 text-md-end">
-            <button class="btn btn-outline-secondary btn-sm">
-              {{ openTeamIndex === index ? '−' : '+' }}
-            </button>
-          </div>
+      <div
+        class="row align-items-center bg-body border p-3 mb-2 rounded gx-2"
+        style="cursor: pointer"
+        @click="toggleTeam(index)"
+      >
+        <div class="col-12 col-md-3 mb-1 mb-md-0">{{ team.name }}</div>
+        <div class="col-12 col-md-3 mb-1 mb-md-0">
+          {{ team.employees }} employees
+        </div>
+        <div class="col-12 col-md-3 mb-1 mb-md-0">
+          {{ team.skills }} competences
+        </div>
+        <div class="col-12 col-md-3 text-md-end">
+          <button class="btn btn-outline-secondary btn-sm">
+            {{ openTeamIndex === index ? '−' : '+' }}
+          </button>
         </div>
         <div
           v-if="openTeamIndex === index"
