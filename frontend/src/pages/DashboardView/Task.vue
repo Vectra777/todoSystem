@@ -29,7 +29,8 @@
     <TaskForm
       v-if="selectedTask"
       :task="selectedTask"
-      :readonly="!userStore.isAdmin"
+      :lookAsHR="true"
+      :mainView="false"
       @close="selectedTask = null"
       @save="handleSaveTask"
     />
