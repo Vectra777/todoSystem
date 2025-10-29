@@ -4,6 +4,8 @@ import Login from "./pages/LoginView/Login.vue";
 import About from "./pages/AboutView/About.vue";
 import Dashboard from "./pages/DashboardView/Dashboard.vue";
 import RHDashboard from "./pages/RHView/Dashboard.vue";
+import Profile from "./pages/ProfileView/Profile.vue";
+import NotFound from "./pages/404View/NotFound.vue";
 import { useUserStore } from "./stores/user";
 
 
@@ -12,7 +14,9 @@ const routes = [
   { path: "/login", component: Login },
   { path: "/about", component: About },
   { path: "/dashboard", component: Dashboard },
-  { path: "/hr", component: RHDashboard, meta: { requiresAdmin: true } }
+  { path: "/hr", component: RHDashboard, meta: { requiresAdmin: true } },
+  { path: "/profile", component: Profile },
+  { path: '/:pathMatch(.*)*', name: '404', component: NotFound }
 ];
 
 const router = createRouter({

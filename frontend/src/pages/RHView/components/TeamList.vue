@@ -4,7 +4,7 @@
 
     <template v-for="(team, index) in teams" :key="team.id">
       <div
-        class="row align-items-center bg-light p-3 mb-2 rounded gx-2"
+        class="row align-items-center bg-body border p-3 mb-2 rounded gx-2"
         style="cursor: pointer"
         @click="toggleTeam(index)"
       >
