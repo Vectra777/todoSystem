@@ -10,7 +10,7 @@ const defaultTasks = [
     content: 'Explore the dashboard views and filters.',
     progress: 25,
     label: 'Onboarding',
-    status: 'doing',
+    status: 'to do',
     start_date: '2025-09-30',
     end_date: '2025-10-15'
   }),
@@ -30,26 +30,6 @@ const defaultTasks = [
     content: 'Coordinate launch checklist with communications team.',
     progress: 90,
     label: 'Operations',
-    status: 'finished',
-    start_date: '2025-08-15',
-    end_date: '2025-09-05'
-  }),
-  createCompetence({
-    id: 4,
-    title: 'Meet-up devs',
-    content: 'Organize a meet-up with the devs',
-    progress: 0,
-    label: 'Operations',
-    status: 'to do',
-    start_date: '2025-08-15',
-    end_date: '2025-09-05'
-  }),
-  createCompetence({
-    id: 5,
-    title: 'Creating an account',
-    content: 'The name is quite explicit.',
-    progress: 100,
-    label: 'HR',
     status: 'finished',
     start_date: '2025-08-15',
     end_date: '2025-09-05'
