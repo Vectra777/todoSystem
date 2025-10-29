@@ -1,7 +1,7 @@
 <template>
-  <div class="row">
+  <div class="row g-3 g-lg-4">
     <div
-      class="col kanban-column"
+      class="col-12 col-md-6 col-lg-3 kanban-column"
       v-for="status in statuses"
       :key="status"
       :class="{ 'drop-over': overStatus === status }"
@@ -10,9 +10,9 @@
       @dragleave="onDragLeave(status)"
       @drop="onDrop(status, $event)"
     >
-      <h4 class="text-center text-capitalize">{{ status }}</h4>
-    <div v-for="task in tasksByStatus(status)" :key="task.id">
-  <CompetenceCard :item="task" @open="$emit('open-task', task)" />
+      <h4 class="text-center text-capitalize mb-3">{{ status }}</h4>
+      <div v-for="task in tasksByStatus(status)" :key="task.id">
+        <CompetenceCard :item="task" @open="$emit('open-task', task)" />
       </div>
     </div >
   </div>
@@ -57,5 +57,21 @@ function onDrop(targetStatus, e) {
   outline: 2px dashed var(--bs-primary);
   outline-offset: -6px;
   background-color: color-mix(in oklab, var(--bs-primary) 8%, transparent);
+}
+
+/* Adjust card density only at breakpoint boundaries (no continuous resizing) */
+@media (max-width: 575.98px) {
+  /* xs: single column – keep cards roomy */
+  .kanban-column .competence-card { padding: 1.25rem !important; }
+}
+
+@media (min-width: 768px) and (max-width: 991.98px) {
+  /* md: two columns – slightly tighter cards */
+  .kanban-column .competence-card { padding: 1rem !important; }
+}
+
+@media (min-width: 1200px) {
+  /* xl+: four columns plenty of space – restore padding */
+  .kanban-column .competence-card { padding: 1.25rem !important; }
 }
 </style>

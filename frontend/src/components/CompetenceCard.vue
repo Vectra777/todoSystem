@@ -16,7 +16,7 @@
           </div>
         </div>
 
-        <div v-if="userStore.isAdmin" class="mb-3">
+  <div v-if="showProgress" class="mb-3">
           <div
             class="progress-circle position-relative d-inline-block"
             style="width: 80px; height: 80px"
@@ -72,11 +72,14 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { useUserStore } from '../stores/user'
 
 const userStore = useUserStore()
 
 userStore.initialize()
+
+const route = useRoute()
 
 const emit = defineEmits(['open'])
 
@@ -125,6 +128,10 @@ const progressColor = computed(() => {
   if (p < 75) return 'gold'
   return 'green'
 })
+
+// Show progress only on HR dashboard (admin route guarded by meta.requiresAdmin)
+const isHRRoute = computed(() => route.matched?.some(r => r.meta && r.meta.requiresAdmin))
+const showProgress = computed(() => userStore.isAdmin && isHRRoute.value)
 
 function onDragStart(e) {
   e.dataTransfer.effectAllowed = 'move'
