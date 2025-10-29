@@ -4,8 +4,12 @@
     <div class="d-flex gap-2 mb-3">
       <input type="text" class="form-control" placeholder="Team name" />
       <input type="text" class="form-control" placeholder="Leader" />
+    </div>
+    <div class="d-flex gap-2 mb-3">
+    <textarea class="form-control" placeholder="Description"></textarea>
+    </div>
+    <div class="text-center">
       <button class="btn btn-success px-4">Add new</button>
     </div>
-    <textarea class="form-control" placeholder="Description"></textarea>
   </div>
 </template>
