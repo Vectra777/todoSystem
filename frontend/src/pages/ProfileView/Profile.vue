@@ -57,7 +57,7 @@
       </div>
     </main>
 
-    <Footer />
+    <Footer class= "bg-body"/>
   </div>
 </template>
 
