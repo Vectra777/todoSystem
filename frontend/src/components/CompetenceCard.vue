@@ -8,7 +8,11 @@
       <div class="flex-grow-1 d-flex flex-column justify-content-between">
         <div>
           <h3 class="fw-bold fs-6">{{ itemObj.title }}</h3>
-          <p class="mb-2 small text-muted">{{ itemObj.content }}</p>
+
+          <div
+            class="mb-2 small text-muted markdown-content"
+            v-html="renderedContentHtml"
+          ></div>
 
           <div class="small text-muted mb-3">
             <div v-if="formattedStart">📅 Start: {{ formattedStart }}</div>
@@ -16,7 +20,7 @@
           </div>
         </div>
 
-        <div v-if="userStore.isAdmin" class="mb-3">
+  <div v-if="showProgress" class="mb-3">
           <div
             class="progress-circle position-relative d-inline-block"
             style="width: 80px; height: 80px"
@@ -72,14 +76,18 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { useUserStore } from '../stores/user'
+import MarkdownIt from 'markdown-it'
+
+const md = new MarkdownIt()
 
 const userStore = useUserStore()
-
 userStore.initialize()
 
-const emit = defineEmits(['open'])
+const route = useRoute()
 
+const emit = defineEmits(['open'])
 const props = defineProps({
   item: { type: Object, required: true },
 })
@@ -97,7 +105,6 @@ function formatDate(val) {
   const year = d.getUTCFullYear()
   return `${day}/${month}/${year}`
 }
-
 const itemObj = computed(() => ({
   id: props.item?.id ?? null,
   title: props.item?.title ?? 'Untitled',
@@ -107,17 +114,19 @@ const itemObj = computed(() => ({
   start_date: props.item?.start_date ?? null,
   end_date: props.item?.end_date ?? null,
 }))
-
 const formattedStart = computed(() => formatDate(itemObj.value.start_date))
 const formattedEnd = computed(() => formatDate(itemObj.value.end_date))
 
+const renderedContentHtml = computed(() => {
+  const content = itemObj.value.content
+  return content ? md.render(content) : ''
+})
+
 const radius = 45
 const circumference = 2 * Math.PI * radius
-
 const dashOffset = computed(
   () => circumference * (1 - (itemObj.value.progress || 0) / 100)
 )
-
 const progressColor = computed(() => {
   const p = itemObj.value.progress || 0
   if (p < 25) return 'red'
@@ -126,11 +135,14 @@ const progressColor = computed(() => {
   return 'green'
 })
 
+// Show progress only on HR dashboard (admin route guarded by meta.requiresAdmin)
+const isHRRoute = computed(() => route.matched?.some(r => r.meta && r.meta.requiresAdmin))
+const showProgress = computed(() => userStore.isAdmin && isHRRoute.value)
+
 function onDragStart(e) {
   e.dataTransfer.effectAllowed = 'move'
   e.dataTransfer.setData('text/plain', String(props.item?.id))
 }
-
 function openDetails() {
   emit('open', { ...itemObj.value })
 }
@@ -143,11 +155,33 @@ function openDetails() {
   padding: 0.5rem 0;
   align-items: stretch;
 }
-
 .grabbable {
   cursor: grab;
 }
 .grabbable:active {
   cursor: grabbing;
+}
+
+.markdown-content {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  text-align: left;
+}
+
+.markdown-content :deep(*) {
+  font-size: 0.875em;
+  color: inherit;
+}
+.markdown-content :deep(p) {
+  margin-bottom: 0;
+}
+.markdown-content :deep(strong) {
+  font-weight: 700;
+}
+.markdown-content :deep(em) {
+  font-style: italic;
 }
 </style>
