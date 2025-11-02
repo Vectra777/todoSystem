@@ -3,26 +3,28 @@
     <h2 class="text-center fs-5 mb-3">The Teams</h2>
 
     <template v-for="(team, index) in teams" :key="team.id">
-      <div
-        class="row align-items-center bg-body border p-3 mb-2 rounded gx-2"
-        style="cursor: pointer"
-        @click="toggleTeam(index)"
-      >
-        <div class="col-12 col-md-3 mb-1 mb-md-0">{{ team.name }}</div>
-        <div class="col-12 col-md-3 mb-1 mb-md-0">
-          {{ team.employees }} employees
-        </div>
-        <div class="col-12 col-md-3 mb-1 mb-md-0">
-          {{ team.skills }} competences
-        </div>
-        <div class="col-12 col-md-3 text-md-end">
-          <button class="btn btn-outline-secondary btn-sm">
-            {{ openTeamIndex === index ? '−' : '+' }}
-          </button>
+      <div class="border-bottom py-3">
+        <div
+          class="row align-items-center bg-body p-3 gx-2"
+          style="cursor: pointer"
+          @click="toggleTeam(index)"
+        >
+          <div class="col-12 col-md-3 mb-1 mb-md-0">{{ team.name }}</div>
+          <div class="col-12 col-md-3 mb-1 mb-md-0">
+            {{ team.employees }} employees
+          </div>
+          <div class="col-12 col-md-3 mb-1 mb-md-0">
+            {{ team.skills }} competences
+          </div>
+          <div class="col-12 col-md-3 text-md-end">
+            <button class="btn btn-outline-secondary btn-sm">
+              {{ openTeamIndex === index ? '−' : '+' }}
+            </button>
+          </div>
         </div>
         <div
           v-if="openTeamIndex === index"
-          class="p-3 mb-2 bg-light-subtle rounded border"
+          class="p-3 mt-2 bg-light-subtle rounded border"
         >
           <h5 class="mb-3">{{ team.name }} Details</h5>
 
@@ -105,10 +107,9 @@
                 </div>
               </div>
             </div>
-
           </div>
         </div>
-      </div>
+        </div>
       </template>
   </div>
 </template>
