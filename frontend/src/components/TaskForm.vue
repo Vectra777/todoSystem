@@ -1,7 +1,6 @@
 <template>
-  <form @submit.prevent="handleSave"
-        class="position-fixed top-0 end-0 border-start p-4 bg-body-tertiary shadow"
-        style="width: 500px; height: 100vh; z-index: 200000; overflow-y: auto;">
+  <form @submit.prevent="handleSave" class="position-fixed top-0 end-0 border-start p-4 bg-body-tertiary shadow"
+    style="width: 500px; height: 100vh; z-index: 200000; overflow-y: auto;">
 
     <!-- Header -->
     <h5 class="d-flex align-items-center justify-content-between mb-4">
@@ -33,8 +32,8 @@
         <div class="mb-3">
           <label class="form-label">Description</label>
           <template v-if="currentMode === 'edit' && mainView">
-            <textarea v-model="localTask.content" class="form-control" rows="6"
-                      placeholder="Describe the task..." required></textarea>
+            <textarea v-model="localTask.content" class="form-control" rows="6" placeholder="Describe the task..."
+              required></textarea>
           </template>
           <template v-else>
             <div v-html="renderMarkdown(localTask.content)" class="border rounded p-2"></div>
@@ -105,7 +104,7 @@
           <label class="form-label">Employee comment</label>
           <template v-if="currentMode === 'edit' && !lookAsHR">
             <textarea v-model="localTask.commentEmployee" class="form-control" rows="3"
-                      placeholder="Add your comment..."></textarea>
+              placeholder="Add your comment..."></textarea>
           </template>
           <template v-else>
             <p class="mb-0" style="white-space: pre-wrap;">{{ localTask.commentEmployee || '—' }}</p>
@@ -116,7 +115,7 @@
           <label class="form-label">HR comment</label>
           <template v-if="currentMode === 'edit' && lookAsHR">
             <textarea v-model="localTask.commentHR" class="form-control" rows="3"
-                      placeholder="Add an HR comment..."></textarea>
+              placeholder="Add an HR comment..."></textarea>
           </template>
           <template v-else>
             <p class="mb-0" style="white-space: pre-wrap;">{{ localTask.commentHR || '—' }}</p>
@@ -137,16 +136,30 @@
           </div>
         </template>
 
-        <ul class="list-group" style="max-height: 200px; overflow-y: auto;">
-          <li v-for="file in localTask.files || []" :key="file.name" class="list-group-item d-flex align-items-center">
-            <i :class="fileIcon(file.type) + ' fs-4 me-2'"></i>
-            <span class="me-2">{{ file.name }}</span>
-            <button v-if="currentMode === 'edit' && mainView" type="button"
-                    class="btn btn-sm btn-outline-danger ms-auto" @click="removeFile(file)" aria-label="Remove file">
-              <i class="bi bi-trash"></i>
-            </button>
+        <ul class="list-group" style="max-height: 250px; overflow-y: auto;">
+          <li v-for="file in localTask.files || []" :key="file.name"
+            class="list-group-item d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+              <i :class="fileIcon(file.type) + ' fs-4 me-2'"></i>
+              <span class="me-2">{{ file.name }}</span>
+            </div>
+
+            <!-- Actions -->
+            <div>
+              
+              <button v-if="currentMode === 'view'" type="button" class="btn btn-sm color-primary btn-outline-primary"
+                @click="downloadFile(file)">
+                <i class="bi bi-download me-1"></i>
+              </button>
+
+              <button v-if="currentMode === 'edit' && mainView" type="button" class="btn btn-sm btn-outline-danger"
+                @click="removeFile(file)">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
           </li>
         </ul>
+
       </div>
     </div>
 
@@ -252,7 +265,15 @@ export default {
     removeFile(file) {
       if (!this.localTask.files) return;
       this.localTask.files = this.localTask.files.filter(f => f.name !== file.name);
+    },
+    async downloadFile(file) {
+      try {
+      
+      } catch (err) {
+
+      }
     }
+
   },
   watch: {
     task(newTask) {
@@ -268,10 +289,12 @@ export default {
   font-style: italic;
   text-decoration: underline;
 }
+
 .card {
   border-radius: 1rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
+
 .card-header {
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }

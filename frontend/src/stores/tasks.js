@@ -25,11 +25,11 @@ const defaultTasks = [
     start_date: "2025-09-20",
     end_date: "2025-10-10",
     files: [
-      { name: "Rapport_annuel_2025.docx", type: "docx" },
-      { name: "Présentation_projet.pptx", type: "pptx" },
-      { name: "Données_budget.xlsx", type: "xlsx" },
-      { name: "Compte_rendu.pdf", type: "pdf" },
-      { name: "Photo_reunion.jpg", type: "jpg" },
+      { name: "Rapport_annuel_2025.docx", type: "docx", id: 1 },
+      { name: "Présentation_projet.pptx", type: "pptx", id: 2 },
+      { name: "Données_budget.xlsx", type: "xlsx", id: 3 },
+      { name: "Compte_rendu.pdf", type: "pdf",  id: 4 },
+      { name: "Photo_reunion.jpg", type: "jpg", id: 5},
     ],
   }),
 
@@ -43,11 +43,11 @@ const defaultTasks = [
     start_date: "2025-08-15",
     end_date: "2025-09-05",
     files: [
-      { name: "Rapport_annuel_2025.docx", type: "docx" },
-      { name: "Présentation_projet.pptx", type: "pptx" },
-      { name: "Données_budget.xlsx", type: "xlsx" },
-      { name: "Compte_rendu.pdf", type: "pdf" },
-      { name: "Photo_reunion.jpg", type: "jpg" },
+      { name: "Rapport_annuel_2025.docx", type: "docx", id: 6 },
+      { name: "Présentation_projet.pptx", type: "pptx", id: 7 },
+      { name: "Données_budget.xlsx", type: "xlsx", id: 8 },
+      { name: "Compte_rendu.pdf", type: "pdf", id: 9 },
+      { name: "Photo_reunion.jpg", type: "jpg", id: 10 },
     ],
   }),
 ];

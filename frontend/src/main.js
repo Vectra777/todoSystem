@@ -1,7 +1,7 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
-import router from './router.js'
+import router from './router/index.js'
 import { useThemeStore } from './stores/theme'
 import { useUserStore } from './stores/user'
 import 'bootstrap/dist/css/bootstrap.min.css'

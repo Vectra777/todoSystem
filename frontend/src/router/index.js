@@ -1,12 +1,12 @@
 import { createRouter, createWebHistory } from "vue-router";
-import Home from "./pages/HomeView/Home.vue";
-import Login from "./pages/LoginView/Login.vue";
-import About from "./pages/AboutView/About.vue";
-import Dashboard from "./pages/DashboardView/Dashboard.vue";
-import RHDashboard from "./pages/RHView/Dashboard.vue";
-import Profile from "./pages/ProfileView/Profile.vue";
-import NotFound from "./pages/404View/NotFound.vue";
-import { useUserStore } from "./stores/user";
+import Home from "../views/HomeView/Home.vue";
+import Login from "../views/LoginView/Login.vue";
+import About from "../views/AboutView/About.vue";
+import Dashboard from "../views/DashboardView/Dashboard.vue";
+import RHDashboard from "../views/RHView/Dashboard.vue";
+import Profile from "../views/ProfileView/Profile.vue";
+import NotFound from "../views/404View/NotFound.vue";
+import { useUserStore } from "../stores/user";
 
 
 const routes = [
