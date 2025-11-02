@@ -10,7 +10,7 @@
       @dragleave="onDragLeave(status)"
       @drop="onDrop(status, $event)"
     >
-      <h4 class="text-center text-capitalize mb-3">{{ status }}</h4>
+      <h4 class="text-center text-capitalize mb-3">{{ status + ' (' + counter[status] + ')' }}</h4>
       <div v-for="task in tasksByStatus(status)" :key="task.id">
         <CompetenceCard :item="task" @open="$emit('open-task', task)" />
       </div>
@@ -19,13 +19,21 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import CompetenceCard from './CompetenceCard.vue'
 const props = defineProps({ tasks: Array })
 const emit = defineEmits(['edit-task', 'delete-task', 'move-task', 'open-task'])
 const statuses = ['to do', 'doing', 'finished', 'validated']
 
 const overStatus = ref(null)
+
+const counter = computed(() => {
+  const counter = { 'to do': 0, 'doing': 0, 'finished': 0, 'validated': 0 }
+  props.tasks.map((task) => {
+    counter[task.status]++
+  })
+  return counter
+})
 
 function tasksByStatus(status) {
   return props.tasks.filter((t) => t.status === status)
