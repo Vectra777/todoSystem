@@ -50,6 +50,39 @@ const defaultTasks = [
       { name: "Photo_reunion.jpg", type: "jpg", id: 10 },
     ],
   }),
+
+  createCompetence({
+    id: 4,
+    title: "Q4 Performance Reviews",
+    content: "# 📊 Q4 Performance Reviews\n\n**Review Period:** November 2025  \n**Owner:** HR Department  \n\n---\n\n## Objective\nConduct comprehensive performance reviews for all team members before year-end.\n\n---\n\n## Timeline\n- Week 1-2: Schedule individual meetings\n- Week 3-4: Conduct reviews and gather feedback\n\n---\n\n## Key Activities\n- Review individual KPIs and achievements\n- Discuss career development goals\n- Identify training needs for next quarter",
+    progress: 30,
+    label: "HR",
+    status: "doing",
+    start_date: "2025-11-01",
+    end_date: "2025-11-30",
+  }),
+
+  createCompetence({
+    id: 5,
+    title: "Holiday Season Marketing",
+    content: "# 🎄 Holiday Season Marketing Campaign\n\n**Campaign Period:** November - December 2025  \n**Owner:** Marketing Team  \n\n---\n\n## Overview\nPrepare and launch holiday-themed marketing materials across all channels.\n\n---\n\n## Deliverables\n- Email templates\n- Social media content calendar\n- Website banner updates\n- Special promotions strategy",
+    progress: 15,
+    label: "Marketing",
+    status: "to do",
+    start_date: "2025-11-05",
+    end_date: "2025-12-20",
+  }),
+
+  createCompetence({
+    id: 6,
+    title: "Security Audit",
+    content: "# 🔒 Annual Security Audit\n\n**Audit Date:** Mid-November 2025  \n**Owner:** IT Security Team  \n\n---\n\n## Scope\n- Review access controls\n- Check security protocols\n- Update security documentation\n- Test incident response procedures",
+    progress: 0,
+    label: "IT",
+    status: "to do",
+    start_date: "2025-11-15",
+    end_date: "2025-11-15",
+  }),
 ];
 
 

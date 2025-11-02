@@ -79,8 +79,9 @@ const emit = defineEmits(['open-task'])
 const detailed = ref(false)
 
 // State for displayed month (year, month index)
-const shownYear = ref(new Date().getUTCFullYear())
-const shownMonth = ref(new Date().getUTCMonth()) // 0-11
+const now = new Date()
+const shownYear = ref(now.getFullYear())
+const shownMonth = ref(now.getMonth()) // 0-11
 
 function goToPrevMonth() {
 	if (shownMonth.value === 0) {
@@ -96,12 +97,13 @@ function goToNextMonth() {
 }
 function goToToday() {
 	const now = new Date()
-	shownYear.value = now.getUTCFullYear()
-	shownMonth.value = now.getUTCMonth()
+	shownYear.value = now.getFullYear()
+	shownMonth.value = now.getMonth()
 }
 
 const monthLabel = computed(() => {
-	return new Date(Date.UTC(shownYear.value, shownMonth.value, 1)).toLocaleDateString(undefined, {
+	const date = new Date(shownYear.value, shownMonth.value, 1)
+	return date.toLocaleDateString(undefined, {
 		month: 'long',
 		year: 'numeric'
 	})
@@ -114,13 +116,13 @@ function parseDateOnly(val) {
 	if (typeof val === 'string') {
 		const m = val.match(/^(\d{4})-(\d{2})-(\d{2})/)
 		if (m) {
-			return new Date(Date.UTC(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3])))
+			return new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]))
 		}
 	}
 	try {
 		const d = new Date(val)
 		if (isNaN(d)) return null
-		return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
+		return new Date(d.getFullYear(), d.getMonth(), d.getDate())
 	} catch {
 		return null
 	}
@@ -138,19 +140,19 @@ const tasksWithoutDates = computed(() => tasksAugmented.value.filter(t => !t._st
 const calendarCells = computed(() => {
 	const year = shownYear.value
 	const month = shownMonth.value
-	const firstOfMonth = new Date(Date.UTC(year, month, 1))
-	let startWeekday = firstOfMonth.getUTCDay() // 0=Sun
+	const firstOfMonth = new Date(year, month, 1)
+	let startWeekday = firstOfMonth.getDay() // 0=Sun
 	// Convert to Monday=0 index
 	startWeekday = (startWeekday + 6) % 7
 	const firstCellDate = new Date(firstOfMonth)
-	firstCellDate.setUTCDate(firstOfMonth.getUTCDate() - startWeekday)
+	firstCellDate.setDate(firstOfMonth.getDate() - startWeekday)
 
 	const cells = []
 	for (let i = 0; i < 42; i++) { // 6 weeks * 7 days
 		const d = new Date(firstCellDate)
-		d.setUTCDate(firstCellDate.getUTCDate() + i)
-		const inCurrentMonth = d.getUTCMonth() === month
-		const today = isSameDateUTC(d, new Date())
+		d.setDate(firstCellDate.getDate() + i)
+		const inCurrentMonth = d.getMonth() === month
+		const today = isSameDate(d, new Date())
 		const dayTasks = tasksForDate(d)
 		cells.push({
 			key: d.toISOString().slice(0, 10),
@@ -163,14 +165,14 @@ const calendarCells = computed(() => {
 	return cells
 })
 
-function isSameDateUTC(a, b) {
-	return a.getUTCFullYear() === b.getUTCFullYear() && a.getUTCMonth() === b.getUTCMonth() && a.getUTCDate() === b.getUTCDate()
+function isSameDate(a, b) {
+	return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
 }
 
 function tasksForDate(dayDate) {
-	const y = dayDate.getUTCFullYear()
-	const m = dayDate.getUTCMonth()
-	const d = dayDate.getUTCDate()
+	const y = dayDate.getFullYear()
+	const m = dayDate.getMonth()
+	const d = dayDate.getDate()
 	const arr = []
 	for (const t of tasksAugmented.value) {
 		const hasStart = !!t._start
@@ -178,16 +180,16 @@ function tasksForDate(dayDate) {
 		if (!hasStart && !hasEnd) continue
 
 		// One-day tasks (start == end)
-		if (hasStart && hasEnd && isSameDateUTC(t._start, t._end) && isSameDateUTC(t._start, dayDate)) {
+		if (hasStart && hasEnd && isSameDate(t._start, t._end) && isSameDate(t._start, dayDate)) {
 			arr.push({ ...t, __marker: 'start' })
 			continue
 		}
 
-		if (hasStart && isSameDateUTC(t._start, dayDate)) {
+		if (hasStart && isSameDate(t._start, dayDate)) {
 			arr.push({ ...t, __marker: 'start' })
 			continue
 		}
-		if (hasEnd && isSameDateUTC(t._end, dayDate)) {
+		if (hasEnd && isSameDate(t._end, dayDate)) {
 			arr.push({ ...t, __marker: 'end' })
 			continue
 		}
@@ -201,7 +203,7 @@ function tasksForDate(dayDate) {
 
 function taskChipTitle(t) {
 	let marker = ''
-	if (t._start && t._end && isSameDateUTC(t._start, t._end)) marker = 'One-day task'
+	if (t._start && t._end && isSameDate(t._start, t._end)) marker = 'One-day task'
 	else if (t.__marker === 'start') marker = 'Start'
 	else if (t.__marker === 'end') marker = 'End'
 	else if (t.__marker === 'span') marker = 'In progress'
