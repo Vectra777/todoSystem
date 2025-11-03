@@ -13,6 +13,7 @@ const defaultTasks = [
     status: "to do",
     start_date: "2025-09-30",
     end_date: "2025-10-15",
+    members: [{name:"Alexis",id:"e1"},{name: "Valentin",id:"e2"},{name:"Team dev",id:"t1"}]
   }),
 
   createCompetence({

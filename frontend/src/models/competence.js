@@ -13,6 +13,7 @@ export function createCompetence(data = {}) {
     start_date: data.start_date ?? null,
     end_date: data.end_date ?? null,
     status: data.status ?? 'to do',
-    files: data.files ?? []
+    files: data.files ?? [],
+    members: data.members ?? []
   }
 }
