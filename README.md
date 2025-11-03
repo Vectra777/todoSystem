@@ -76,7 +76,7 @@ The application consists of a **Vue.js frontend** and a planned **Node.js/Expres
 | Milestone | Date | Objectives | Status |
 |------------|-------|------------|--------|
 | **1** | Oct 6, 2025 | Documentation, mockups, DB schema | ✅ |
-| **2** | Nov 3, 2025 | Frontend development (Vue.js) | ⏳ |
+| **2** | Nov 3, 2025 | Frontend development (Vue.js) | ✅ |
 | **3** | Dec 8, 2025 | Backend (API, auth, integration) & final presentation | ⏳ |
 
 ---
