@@ -37,6 +37,8 @@
 							class="task-chip"
 							:class="t.__marker"
 							:title="taskChipTitle(t)"
+							@click="$emit('open-task', t)"
+							style="cursor: pointer;"
 						>
 							<span class="truncate">{{ t.title }}</span>
 						</div>
@@ -54,7 +56,15 @@
 			<details>
 				<summary class="fw-semibold">Tasks without dates ({{ tasksWithoutDates.length }})</summary>
 				<div v-if="!detailed" class="d-flex flex-wrap gap-2 mt-2">
-					<div v-for="t in tasksWithoutDates" :key="t.id" class="task-chip no-date">{{ t.title }}</div>
+					<div 
+						v-for="t in tasksWithoutDates" 
+						:key="t.id" 
+						class="task-chip no-date"
+						@click="$emit('open-task', t)"
+						style="cursor: pointer;"
+					>
+						{{ t.title }}
+					</div>
 				</div>
 				<div v-else class="d-flex flex-wrap gap-2 mt-2">
 					<div v-for="t in tasksWithoutDates" :key="t.id" class="mb-2">

@@ -113,6 +113,10 @@ const itemObj = computed(() => ({
   label: props.item?.label ?? '',
   start_date: props.item?.start_date ?? null,
   end_date: props.item?.end_date ?? null,
+  status: props.item?.status ?? 'to do',
+  files: props.item?.files ?? [],
+  commentEmployee: props.item?.commentEmployee ?? '',
+  commentHR: props.item?.commentHR ?? '',
 }))
 const formattedStart = computed(() => formatDate(itemObj.value.start_date))
 const formattedEnd = computed(() => formatDate(itemObj.value.end_date))

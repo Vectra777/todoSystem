@@ -1,20 +1,24 @@
 <template>
-  <form @submit.prevent="handleSave" class="position-fixed top-0 end-0 border-start p-4 bg-body-tertiary shadow"
-    style="width: 500px; height: 100vh; z-index: 200000; overflow-y: auto;">
+  <form @submit.prevent="handleSave"
+        class="position-fixed top-0 end-0 border-start p-4 bg-body-tertiary shadow"
+        style="width: 500px; height: 100vh; z-index: 200000; overflow-y: auto;">
 
+    <!-- Header -->
     <h5 class="d-flex align-items-center justify-content-between mb-4">
-      <span>{{ localTask.id ? localTask.title : 'New Task' }}</span>
+      <span>{{ task.title }} task</span>
       <div>
-        <button v-if="!isCreating" type="button" class="btn btn-outline-primary btn-sm me-2" @click="toggleMode">
+        <button type="button" class="btn btn-outline-primary btn-sm me-2" @click="toggleMode">
           {{ currentMode === 'view' ? 'Edit' : 'View' }}
         </button>
         <button type="button" class="btn-close" aria-label="Close" @click="$emit('close')"></button>
       </div>
     </h5>
 
+    <!-- General Information -->
     <div class="card mb-4">
       <div class="card-header fw-semibold">General Information</div>
       <div class="card-body">
+        <!-- Title -->
         <div class="mb-3">
           <label class="form-label">Title</label>
           <template v-if="currentMode === 'edit' && mainView">
@@ -25,17 +29,19 @@
           </template>
         </div>
 
+        <!-- Description -->
         <div class="mb-3">
           <label class="form-label">Description</label>
           <template v-if="currentMode === 'edit' && mainView">
-            <textarea v-model="localTask.content" class="form-control" rows="6" placeholder="Describe the task..."
-              required></textarea>
+            <textarea v-model="localTask.content" class="form-control" rows="6"
+                      placeholder="Describe the task..." required></textarea>
           </template>
           <template v-else>
             <div v-html="renderMarkdown(localTask.content)" class="border rounded p-2"></div>
           </template>
         </div>
 
+        <!-- Label -->
         <div class="mb-3">
           <label class="form-label">Label</label>
           <template v-if="currentMode === 'edit' && mainView">
@@ -46,19 +52,11 @@
           </template>
         </div>
 
+        <!-- Status -->
         <div class="mb-3">
           <label class="form-label">Status</label>
           <template v-if="currentMode === 'edit' && !mainView">
             <select v-model="localTask.status" class="form-select" required>
-              <option disabled value="">Select a status</option>
-              <option>to do</option>
-              <option>doing</option>
-              <option>finished</option>
-              <option v-if="lookAsHR">validated</option>
-            </select>
-          </template>
-           <template v-else-if="currentMode === 'edit' && mainView">
-             <select v-model="localTask.status" class="form-select" required>
               <option disabled value="">Select a status</option>
               <option>to do</option>
               <option>doing</option>
@@ -73,6 +71,7 @@
       </div>
     </div>
 
+    <!-- Dates -->
     <div class="card mb-4">
       <div class="card-header fw-semibold">Dates</div>
       <div class="card-body">
@@ -98,28 +97,72 @@
       </div>
     </div>
 
+    <!-- Comments -->
     <div class="card mb-4" v-if="!mainView">
       <div class="card-header fw-semibold">Comments</div>
       <div class="card-body">
-         </div>
+        <div class="mb-3">
+          <label class="form-label">Employee comment</label>
+          <template v-if="currentMode === 'edit' && !lookAsHR">
+            <textarea v-model="localTask.commentEmployee" class="form-control" rows="3"
+                      placeholder="Add your comment..."></textarea>
+          </template>
+          <template v-else>
+            <p class="mb-0" style="white-space: pre-wrap;">{{ localTask.commentEmployee || '—' }}</p>
+          </template>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">HR comment</label>
+          <template v-if="currentMode === 'edit' && lookAsHR">
+            <textarea v-model="localTask.commentHR" class="form-control" rows="3"
+                      placeholder="Add an HR comment..."></textarea>
+          </template>
+          <template v-else>
+            <p class="mb-0" style="white-space: pre-wrap;">{{ localTask.commentHR || '—' }}</p>
+          </template>
+        </div>
+      </div>
     </div>
 
-    <div class="card mb-4" v-if="mainView">
+    <!-- Files -->
+    <div class="card mb-4">
       <div class="card-header fw-semibold">Attached Files</div>
       <div class="card-body">
+        <template v-if="currentMode === 'edit' && mainView">
+          <div class="mb-3">
+            <label class="form-label">Add files</label>
+            <input type="file" class="form-control" @change="onFilesSelected" multiple />
+            <small class="text-muted">You can add multiple files.</small>
+          </div>
+        </template>
+
+        <div v-if="!localTask.files || localTask.files.length === 0" class="text-muted text-center py-3">
+          No files attached
         </div>
+        <ul v-else class="list-group" style="max-height: 200px; overflow-y: auto;">
+          <li v-for="(file, index) in localTask.files" :key="file.id || file.name || index" class="list-group-item d-flex align-items-center">
+            <i :class="fileIcon(file.type) + ' fs-4 me-2'"></i>
+            <span class="me-2">{{ file.name }}</span>
+            <button v-if="currentMode === 'edit' && mainView" type="button"
+                    class="btn btn-sm btn-outline-danger ms-auto" @click="removeFile(file)" aria-label="Remove file">
+              <i class="bi bi-trash"></i>
+            </button>
+          </li>
+        </ul>
+      </div>
     </div>
 
+    <!-- Actions -->
     <div class="d-flex justify-content-end mt-4 mb-3">
       <div v-if="currentMode === 'edit'">
         <button class="btn btn-secondary me-2" type="button" @click="$emit('close')">
           <i class="bi bi-x-lg me-1"></i> Cancel
         </button>
         <button class="btn btn-success" type="submit" :disabled="!isFormValid">
-          <i class="bi bi-check-lg me-1"></i> 
-          {{ isCreating ? 'Create' : 'Save' }}
+          <i class="bi bi-check-lg me-1"></i> Save
         </button>
-        </div>
+      </div>
       <div v-else>
         <button class="btn btn-secondary" type="button" @click="$emit('close')">
           <i class="bi bi-x-lg me-1"></i> Close
@@ -139,11 +182,10 @@ export default {
     task: { type: Object, required: true },
     mainView: { type: Boolean, default: false },
     lookAsHR: { type: Boolean, default: false },
-    isCreating: { type: Boolean, default: false },
   },
   data() {
     return {
-      currentMode: this.isCreating ? 'edit' : 'view',
+      currentMode: 'view',
       localTask: this.normalizeTask(this.task),
     }
   },
@@ -153,7 +195,8 @@ export default {
         this.localTask.title &&
         this.localTask.content &&
         this.localTask.label &&
-        this.localTask.status
+        this.localTask.status &&
+        (this.localTask.files?.length > 0)
       );
     }
   },
@@ -164,9 +207,7 @@ export default {
     handleSave() {
       if (this.isFormValid) {
         this.$emit('save', this.localTask);
-        if (!this.isCreating) {
-          this.currentMode = 'view';
-        }
+        this.currentMode = 'view';
       }
     },
     renderMarkdown(text) {
@@ -174,8 +215,10 @@ export default {
     },
     normalizeTask(task) {
       if (!task) return { files: [] };
-      const copy = { ...task };
-      if (!copy.files) copy.files = [];
+      const copy = { 
+        ...task,
+        files: Array.isArray(task.files) ? [...task.files] : []
+      };
       if (copy.start_date) copy.start_date = this.normalizeDateForInput(copy.start_date);
       if (copy.end_date) copy.end_date = this.normalizeDateForInput(copy.end_date);
       return copy;
@@ -214,19 +257,11 @@ export default {
     removeFile(file) {
       if (!this.localTask.files) return;
       this.localTask.files = this.localTask.files.filter(f => f.name !== file.name);
-    },
-    async downloadFile(file) {
-      try {
-      
-      } catch (err) {
-
-      }
     }
   },
   watch: {
     task(newTask) {
       this.localTask = this.normalizeTask(newTask);
-      this.currentMode = this.isCreating ? 'edit' : 'view';
     },
   },
 }

@@ -35,7 +35,7 @@
   <TaskForm
     v-if="selectedTask"
     :task="selectedTask"
-    :lookAsHR="userStore.isAdmin"
+    :lookAsHR="true"
     :mainView="isMainView"
     :isCreating="selectedTask.id === null"
     @close="selectedTask = null"
@@ -123,7 +123,7 @@ const skillItems = computed(() => {
 })
 
 const selectedTask = ref(null)
-const isMainView = ref(false)
+const isMainView = ref(true)
 
 function handleSortChange(sortValue) {
   currentSort.value = sortValue

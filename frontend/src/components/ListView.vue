@@ -15,6 +15,7 @@
           <th>Status</th>
           <th>Start Date</th>
           <th>End Date</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -24,6 +25,11 @@
           <td>{{ task.status }}</td>
           <td>{{ task.start_date || '-' }}</td>
           <td>{{ task.end_date || '-' }}</td>
+          <td>
+            <button class="btn btn-sm btn-info text-white" @click="$emit('open-task', task)">
+              Voir
+            </button>
+          </td>
         </tr>
       </tbody>
     </table>
