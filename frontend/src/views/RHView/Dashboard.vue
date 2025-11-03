@@ -18,6 +18,7 @@
         @status-change="handleStatusChange"
         @filter-label-change="handleLabelChange"
         @filter-title-change="handleTitleChange"
+        @add-new="handleAddNewCompetence"
       />
       <div class="d-flex flex-wrap justify-content-center gap-4">
         <CompetenceCard
@@ -34,7 +35,9 @@
   <TaskForm
     v-if="selectedTask"
     :task="selectedTask"
-    :readonly="!userStore.isAdmin"
+    :lookAsHR="userStore.isAdmin"
+    :mainView="isMainView"
+    :isCreating="selectedTask.id === null"
     @close="selectedTask = null"
     @save="handleSaveTask"
   />
@@ -96,7 +99,6 @@ const skillItems = computed(() => {
     })
   }
 
-
   if (currentLabelFilter.value) {
     const query = currentLabelFilter.value.toLowerCase()
     items = items.filter(
@@ -121,6 +123,7 @@ const skillItems = computed(() => {
 })
 
 const selectedTask = ref(null)
+const isMainView = ref(false)
 
 function handleSortChange(sortValue) {
   currentSort.value = sortValue
@@ -140,11 +143,31 @@ function handleTitleChange(title) {
 
 function openTaskDetails(task) {
   selectedTask.value = { ...task }
+  isMainView.value = false
+}
+
+function handleAddNewCompetence() {
+  selectedTask.value = {
+    id: null,
+    title: 'New Competence',
+    content: '',
+    label: '',
+    status: 'to do',
+    progress: 0,
+    start_date: null,
+    end_date: null,
+    files: [],
+  }
+  isMainView.value = true
 }
 
 async function handleSaveTask(updatedTask) {
   try {
-    await tasksStore.updateTask(updatedTask.id, updatedTask)
+    if (updatedTask.id) {
+      await tasksStore.updateTask(updatedTask.id, updatedTask)
+    } else {
+      await tasksStore.createTask(updatedTask)
+    }
     selectedTask.value = null
   } catch (error) {
     console.error('Failed to save task:', error)

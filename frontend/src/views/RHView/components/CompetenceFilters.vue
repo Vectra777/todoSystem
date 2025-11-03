@@ -58,7 +58,7 @@
         v-model="filterLabel"
         @input="emitLabelChange"
       />
-      </div>
+    </div>
 
     <div class="col-12 col-md-auto">
       <input
@@ -68,12 +68,18 @@
         v-model="filterTitle"
         @input="emitTitleChange"
       />
-      </div>
+    </div>
 
     <div class="col-12 col-md-auto">
-      <button class="btn btn-success px-4 w-100">Add new</button>
+      <button
+        class="btn btn-success px-4 w-100"
+        type="button"
+        @click="emitAddNew"
+      >
+        Add new
+      </button>
     </div>
-  </div>
+    </div>
 </template>
 
 <script setup>
@@ -84,15 +90,16 @@ const emit = defineEmits([
   'status-change',
   'filter-label-change',
   'filter-title-change',
+  'add-new',
 ])
 
 const statusOptions = ref([
-  { value: 'not-started', label: 'No started (0%)' },
+  { value: 'not-started', label: 'Not started (0%)' },
   { value: '0-25', label: '0% < X <= 25%' },
   { value: '25-50', label: '25% < X <= 50%' },
   { value: '50-75', label: '50% < X <= 75%' },
   { value: '75-99', label: '75% < X <= 99%' },
-  { value: 'in-progress', label: 'En cours (1% <= X <= 99%)' },
+  { value: 'in-progress', label: 'In Progress (1% <= X <= 99%)' },
   { value: 'finished', label: 'Finished (100%)' },
 ])
 const selectedStatuses = ref([])
@@ -114,5 +121,9 @@ function emitLabelChange() {
 
 function emitTitleChange() {
   emit('filter-title-change', filterTitle.value)
+}
+
+function emitAddNew() {
+  emit('add-new')
 }
 </script>

@@ -138,7 +138,7 @@ export const useTasksStore = defineStore("tasks", {
       try {
         const stored = readStorage();
         if (stored.length) {
-          this.items = normalizeTasks(defaultTasks); // normaly you use the stored data here
+          this.items = normalizeTasks(defaultTasks);
 
         } else {
           this.items = normalizeTasks(defaultTasks);
@@ -178,6 +178,21 @@ export const useTasksStore = defineStore("tasks", {
       this.items[index] = { ...snapshot };
       this.saveSnapshot();
     },
+
+    createTask(newTaskData) {
+      const maxId = this.items.reduce(
+        (max, item) => Math.max(item.id || 0, max),
+        0
+      );
+      const newTask = createCompetence({
+        ...newTaskData,
+        id: maxId + 1,
+      });
+      this.items.push(newTask);
+      this.saveSnapshot();
+      return newTask;
+    },
+
     updateTask(id, partial) {
       const index = this.items.findIndex(
         (task) => String(task.id) === String(id)
