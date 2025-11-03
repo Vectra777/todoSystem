@@ -115,6 +115,7 @@ const itemObj = computed(() => ({
   end_date: props.item?.end_date ?? null,
   status: props.item?.status ?? 'to do',
   files: props.item?.files ?? [],
+  members: props.item?.members ?? [],
   commentEmployee: props.item?.commentEmployee ?? '',
   commentHR: props.item?.commentHR ?? '',
 }))

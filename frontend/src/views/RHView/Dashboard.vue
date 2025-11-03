@@ -36,7 +36,7 @@
     v-if="selectedTask"
     :task="selectedTask"
     :lookAsHR="true"
-    :mainView="isMainView"
+    :mainView="true"
     :isCreating="selectedTask.id === null"
     @close="selectedTask = null"
     @save="handleSaveTask"
