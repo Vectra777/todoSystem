@@ -3,10 +3,22 @@
   <div>
     <div class="dashboard-wrapper py-5">
       <div class="container">
-        <SearchBar />
-        <TeamList class="my-4" />
-        <AddTeamForm class="my-4" />
-        <AddEmployeeForm class="my-4" />
+        <SearchBar
+          v-model="searchQuery"
+          :suggestions="filteredSuggestions"
+          @item-selected="handleEmployeeSelected"
+        />
+        <TeamList
+          class="my-4"
+          :selected-employee="selectedEmployee"
+          :all-employees="fakeEmployees"
+          :all-competences="tasks"
+        />
+
+        <template v-if="!selectedEmployee">
+          <AddTeamForm class="my-4" />
+          <AddEmployeeForm class="my-4" />
+        </template>
       </div>
     </div>
 
@@ -45,7 +57,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 
 import Header from '../../components/Header.vue'
@@ -64,6 +76,93 @@ const tasksStore = useTasksStore()
 const userStore = useUserStore()
 const { tasks } = storeToRefs(tasksStore)
 
+const searchQuery = ref('')
+const selectedEmployee = ref(null)
+
+const fakeEmployees = [
+  { id: 1, name: 'Alice Johnson', teams: ['Devops', 'QA'] },
+  { id: 2, name: 'Bob Smith', teams: ['Marketing'] },
+  { id: 3, name: 'Charlie Brown', teams: ['Design'] },
+  { id: 4, name: 'David Lee', teams: ['Devops'] },
+  { id: 5, name: 'Emily White', teams: ['QA'] },
+  { id: 6, name: 'Alex Dubois', teams: ['Support'] },
+  { id: 7, name: 'Alexandra Martin', teams: ['Marketing'] },
+  { id: 8, name: 'Mohammed Benali', teams: ['Support'] },
+  { id: 9, name: 'Sophie Tremblay', teams: ['Design', 'Marketing'] },
+  { id: 10, name: 'Wei Zhang', teams: ['Devops'] },
+  { id: 11, name: 'Carlos Gomez', teams: ['QA'] },
+  { id: 12, name: 'Fatima Al-Fassi', teams: ['Support'] },
+  { id: 13, name: "James O'Malley", teams: ['Support'] },
+  { id: 14, name: 'Priya Patel', teams: ['Devops'] },
+  { id: 15, name: 'Léa Fournier', teams: ['Design'] },
+  { id: 16, name: 'Kenji Watanabe', teams: ['QA'] },
+  { id: 17, name: 'Olivia Kim', teams: ['Marketing'] },
+  { id: 18, name: 'William Rousseau', teams: ['Devops', 'Support'] },
+  { id: 19, name: 'Isabella Rossi', teams: ['Design'] },
+  { id: 20, name: 'Malik Diawara', teams: ['Devops'] },
+  { id: 21, name: 'Nadia Ivanova', teams: ['QA'] },
+  { id: 22, name: 'Ethan Hunt', teams: ['Marketing', 'Support'] },
+  { id: 23, name: 'Chloé Gagnon', teams: ['Design'] },
+  { id: 24, name: 'Samuel Chen', teams: ['Design'] },
+  { id: 25, name: 'Aarav Sharma', teams: ['Devops'] },
+  { id: 26, name: 'Mia St-Pierre', teams: ['Support'] },
+  { id: 27, name: 'Benjamin Cohen', teams: ['Marketing'] },
+  { id: 28, name: 'Sofia Rodriguez', teams: ['QA'] },
+  { id: 29, name: 'Liam Murphy', teams: ['Devops'] },
+  { id: 30, name: 'Emma Leblanc', teams: ['Design', 'QA'] },
+  { id: 31, name: 'Lucas Silva', teams: ['Support'] },
+  { id: 32, name: 'Hannah Schmidt', teams: ['Marketing'] },
+  { id: 33, name: 'Antoine Lavigne', teams: ['Devops'] },
+  { id: 34, name: 'Zoé Martin', teams: ['QA'] },
+  { id: 35, name: 'Daniel Kim', teams: ['Design'] },
+  { id: 36, name: 'Gabriel Roy', teams: ['Support', 'Devops'] },
+  { id: 37, name: 'Jasmine Kaur', teams: ['Support'] },
+  { id: 38, name: 'Thomas Girard', teams: ['Marketing'] },
+  { id: 39, name: 'Yuki Tanaka', teams: ['QA'] },
+  { id: 40, name: 'Ryan Ibrahim', teams: ['Design'] },
+  { id: 41, name: 'Sara Bouchard', teams: ['Devops'] },
+  { id: 42, name: 'Elijah Brown', teams: ['Support'] },
+  { id: 43, name: 'Camila Fernandez', teams: ['Marketing'] },
+  { id: 44, name: 'Nathan Pelletier', teams: ['QA', 'Devops'] },
+  { id: 45, name: 'Maya Singh', teams: ['Design'] },
+  { id: 46, name: 'Leo Virtanen', teams: ['Devops'] },
+  { id: 47, name: 'Clara Moreau', teams: ['Support'] },
+  { id: 48, name: 'Oumar Diallo', teams: ['Marketing'] },
+  { id: 49, name: 'Felix Schneider', teams: ['QA'] },
+  { id: 50, name: 'Juliette Lavoie', teams: ['Design', 'Marketing'] },
+]
+
+const filteredSuggestions = computed(() => {
+  if (
+    !searchQuery.value ||
+    (selectedEmployee.value &&
+      searchQuery.value === selectedEmployee.value.name)
+  ) {
+    return []
+  }
+
+  const query = searchQuery.value.toLowerCase()
+  return fakeEmployees
+    .filter((emp) => emp.name.toLowerCase().includes(query))
+    .slice(0, 20)
+})
+
+function handleEmployeeSelected(employee) {
+  selectedEmployee.value = employee
+  searchQuery.value = employee.name
+}
+
+watch(searchQuery, (newQuery) => {
+  if (!newQuery) {
+    selectedEmployee.value = null
+  } else if (
+    selectedEmployee.value &&
+    newQuery !== selectedEmployee.value.name
+  ) {
+    selectedEmployee.value = null
+  }
+})
+
 const currentSort = ref('')
 const currentStatusFilters = ref([])
 const currentLabelFilter = ref('')
@@ -71,6 +170,11 @@ const currentTitleFilter = ref('')
 
 const skillItems = computed(() => {
   let items = [...tasks.value]
+
+  if (selectedEmployee.value) {
+    const employeeTeams = selectedEmployee.value.teams 
+    items = items.filter((task) => employeeTeams.includes(task.label))
+  }
 
   if (currentStatusFilters.value.length > 0) {
     items = items.filter((task) => {
@@ -182,7 +286,6 @@ onMounted(() => {
 
 <style scoped>
 .dashboard-wrapper {
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
   background: radial-gradient(

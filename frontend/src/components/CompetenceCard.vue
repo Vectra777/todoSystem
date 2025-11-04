@@ -140,7 +140,6 @@ const progressColor = computed(() => {
   return 'green'
 })
 
-// Show progress only on HR dashboard (admin route guarded by meta.requiresAdmin)
 const isHRRoute = computed(() => route.matched?.some(r => r.meta && r.meta.requiresAdmin))
 const showProgress = computed(() => userStore.isAdmin && isHRRoute.value)
 
