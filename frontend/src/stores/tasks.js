@@ -32,6 +32,7 @@ const defaultTasks = [
       { name: "Compte_rendu.pdf", type: "pdf",  id: 4 },
       { name: "Photo_reunion.jpg", type: "jpg", id: 5},
     ],
+    members: [{name:"Alexis",id:"e1"},{name: "Valentin",id:"e2"},{name:"Team dev",id:"t1"}]
   }),
 
   createCompetence({
