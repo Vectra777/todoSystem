@@ -14,6 +14,7 @@
           :all-employees="fakeEmployees"
           :all-competences="tasks"
         />
+
         <template v-if="!selectedEmployee">
           <AddTeamForm class="my-4" />
           <AddEmployeeForm class="my-4" />
@@ -143,7 +144,7 @@ const filteredSuggestions = computed(() => {
   const query = searchQuery.value.toLowerCase()
   return fakeEmployees
     .filter((emp) => emp.name.toLowerCase().includes(query))
-    .slice(0, 10)
+    .slice(0, 20)
 })
 
 function handleEmployeeSelected(employee) {
@@ -169,6 +170,11 @@ const currentTitleFilter = ref('')
 
 const skillItems = computed(() => {
   let items = [...tasks.value]
+
+  if (selectedEmployee.value) {
+    const employeeTeams = selectedEmployee.value.teams 
+    items = items.filter((task) => employeeTeams.includes(task.label))
+  }
 
   if (currentStatusFilters.value.length > 0) {
     items = items.filter((task) => {
