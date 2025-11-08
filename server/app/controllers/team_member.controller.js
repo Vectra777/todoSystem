@@ -37,6 +37,21 @@ exports.create = async (req, res) => {
             return;
         }
 
+        // Check if team member already exists
+        const existingMember = await TeamMember.findOne({
+            where: {
+                team_id: req.body.team_id,
+                employee_id: req.body.employee_id
+            }
+        });
+
+        if (existingMember) {
+            res.status(400).send({
+                message: "Employee is already a member of this team"
+            });
+            return;
+        }
+
         // Create Team Member
         const teamMember = {
             team_id: req.body.team_id,
@@ -74,26 +89,23 @@ exports.create = async (req, res) => {
 
         await Promise.all(userTaskPromises);
 
-        // Return the created team member with associated tasks
+        // Return the created team member with basic associated data
         const result = await TeamMember.findOne({
             where: { team_id: req.body.team_id, employee_id: req.body.employee_id },
             include: [
                 {
-                    model: Team,
-                    include: [{
-                        model: TeamTask,
-                        include: [{
-                            model: UserTask,
-                            where: { employee_id: req.body.employee_id },
-                            required: false
-                        }]
-                    }]
+                    model: Team
+                },
+                {
+                    model: Employee,
+                    attributes: ['id', 'firstname', 'lastname', 'email', 'role']
                 }
             ]
         });
 
         res.send(result);
     } catch (err) {
+        console.error('Error creating team member:', err);
         res.status(500).send({
             message: err.message || "Some error occurred while creating the Team Member."
         });
@@ -113,3 +125,114 @@ exports.findAll = (req, res) => {
             });
         });
 }
+
+// Get all teams for a specific employee
+exports.findByEmployee = async (req, res) => {
+    if (!ensureAuthenticated(req, res)) return;
+    const employeeId = req.params.employeeId;
+
+    try {
+        if (!employeeId || !employeeId.match(/^e[0-9]+$/)) {
+            return res.status(400).send({
+                message: "Invalid employee ID format. Must start with 'e'"
+            });
+        }
+
+        const teamMembers = await TeamMember.findAll({
+            where: { employee_id: employeeId },
+            include: [{
+                model: Team,
+                attributes: ['id', 'team_name', 'description']
+            }]
+        });
+
+        const teams = teamMembers.map(tm => ({
+            id: tm.team?.id,
+            name: tm.team?.team_name,
+            description: tm.team?.description,
+            role: tm.role
+        }));
+
+        res.send(teams);
+    } catch (err) {
+        res.status(500).send({
+            message: err.message || "Error retrieving teams for employee."
+        });
+    }
+};
+
+// Remove an employee from a team
+exports.remove = async (req, res) => {
+    if (!ensureAuthenticated(req, res)) return;
+    const teamId = req.params.teamId;
+    const employeeId = req.params.employeeId;
+
+    try {
+        // Validate IDs
+        if (!teamId || !teamId.match(/^t[0-9]+$/)) {
+            return res.status(400).send({
+                message: "Invalid team ID format. Must start with 't'"
+            });
+        }
+        if (!employeeId || !employeeId.match(/^e[0-9]+$/)) {
+            return res.status(400).send({
+                message: "Invalid employee ID format. Must start with 'e'"
+            });
+        }
+
+        // Delete the team member
+        const deleted = await TeamMember.destroy({
+            where: {
+                team_id: teamId,
+                employee_id: employeeId
+            }
+        });
+
+        if (deleted === 0) {
+            return res.status(404).send({
+                message: "Team member relationship not found"
+            });
+        }
+
+        res.status(204).send();
+    } catch (err) {
+        res.status(500).send({
+            message: err.message || "Error removing employee from team."
+        });
+    }
+};
+
+// Get all members of a specific team
+exports.findByTeam = async (req, res) => {
+    if (!ensureAuthenticated(req, res)) return;
+    const teamId = req.params.teamId;
+
+    try {
+        if (!teamId || !teamId.match(/^t[0-9]+$/)) {
+            return res.status(400).send({
+                message: "Invalid team ID format. Must start with 't'"
+            });
+        }
+
+        const teamMembers = await TeamMember.findAll({
+            where: { team_id: teamId },
+            include: [{
+                model: Employee,
+                attributes: ['id', 'firstname', 'lastname', 'email', 'role']
+            }]
+        });
+
+        const members = teamMembers.map(tm => ({
+            id: tm.employee?.id,
+            name: `${tm.employee?.firstname} ${tm.employee?.lastname}`,
+            email: tm.employee?.email,
+            role: tm.role
+        }));
+
+        res.send(members);
+    } catch (err) {
+        res.status(500).send({
+            message: err.message || "Error retrieving members for team."
+        });
+    }
+};

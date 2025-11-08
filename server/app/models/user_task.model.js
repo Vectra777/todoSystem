@@ -31,6 +31,8 @@ module.exports = (connex, Sequelize) => {
       allowNull: true,
       field: 'hr_review'
     },
+  }, {
+    timestamps: false
   });
   return UserTask;
 };

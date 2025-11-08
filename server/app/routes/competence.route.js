@@ -14,5 +14,11 @@ module.exports = (app) => {
     // Get competences for a specific team with progress
     router.get('/team/:teamId', competence.findByTeam);
 
+    // Update a Competence
+    router.put('/:id', competence.update);
+
+    // Delete a Competence
+    router.delete('/:id', competence.delete);
+
     app.use('/api/competence', router);
 }

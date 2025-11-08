@@ -38,17 +38,18 @@
         <div class="card shadow-sm">
           <div class="card-header text-center fw-semibold">My Teams</div>
           <div class="list-group list-group-flush">
-            <div v-if="teams.length === 0" class="list-group-item text-muted text-center">
+            <div v-if="teamsLoading" class="list-group-item text-center">
+              <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+              Loading teams...
+            </div>
+            <div v-else-if="teams.length === 0" class="list-group-item text-muted text-center">
               No teams yet
             </div>
-            <div v-for="team in teams" :key="team.id" class="list-group-item">
+            <div v-else v-for="team in teams" :key="team.id" class="list-group-item">
               <div class="row align-items-center">
-                <div class="col-6 col-md-4 fw-medium">{{ team.name }}</div>
-                <div class="col-3 col-md-4 text-md-center text-muted">
-                  {{ team.employees }} employees
-                </div>
-                <div class="col-3 col-md-4 text-md-end text-muted">
-                  {{ team.competences }} competences
+                <div class="col-12 col-md-6 fw-medium">{{ team.name }}</div>
+                <div class="col-12 col-md-6 text-md-end text-muted">
+                  <small v-if="team.description">{{ team.description }}</small>
                 </div>
               </div>
             </div>
@@ -132,7 +133,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { mapStores } from 'pinia'
 import Header from '../../components/Header.vue'
 import Footer from '../../components/Footer.vue'
@@ -163,8 +164,34 @@ const initials = computed(() => {
 
 const avatarBg = computed(() => '#59c4ad') // pleasant teal similar to screenshot
 
-// teams come from the user store
-const teams = computed(() => userStore.teams || [])
+// Teams data
+const teams = ref([])
+const teamsLoading = ref(false)
+
+// Load teams on mount
+onMounted(async () => {
+  if (userStore.id) {
+    teamsLoading.value = true
+    try {
+      const fetchedTeams = await apiStore.getTeamsByEmployee(userStore.id)
+      teams.value = fetchedTeams.map(team => ({
+        id: team.id,
+        name: team.name,
+        description: team.description,
+        employees: 0, // Will be populated if needed
+        competences: 0 // Will be populated if needed
+      }))
+      // Also update user store with teams
+      userStore.setTeams(teams.value)
+    } catch (error) {
+      console.error('Failed to fetch teams:', error)
+      // Fall back to teams from user store if any
+      teams.value = userStore.teams || []
+    } finally {
+      teamsLoading.value = false
+    }
+  }
+})
 
 // Password reset modal
 const showPasswordModal = ref(false)

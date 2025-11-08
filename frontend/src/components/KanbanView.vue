@@ -23,12 +23,12 @@ import { computed, ref } from 'vue'
 import CompetenceCard from './CompetenceCard.vue'
 const props = defineProps({ tasks: Array })
 const emit = defineEmits(['edit-task', 'delete-task', 'move-task', 'open-task'])
-const statuses = ['to do', 'doing', 'finished', 'validated']
+const statuses = ['to do', 'in progress', 'finished', 'validated']
 
 const overStatus = ref(null)
 
 const counter = computed(() => {
-  const counter = { 'to do': 0, 'doing': 0, 'finished': 0, 'validated': 0 }
+  const counter = { 'to do': 0, 'in progress': 0, 'finished': 0, 'validated': 0 }
   props.tasks.map((task) => {
     counter[task.status]++
   })

@@ -1,7 +1,7 @@
 module.exports = (connex, Sequelize) => {
     const TeamMember = connex.define('team_members', {
         team_id: {
-            type: Sequelize.INTEGER,
+            type: Sequelize.STRING(10),
             primaryKey: true,
             references: {
                 model: 'teams',
@@ -9,7 +9,7 @@ module.exports = (connex, Sequelize) => {
             }
         },
         employee_id: {
-            type: Sequelize.INTEGER,
+            type: Sequelize.STRING(10),
             primaryKey: true,
             references: {
                 model: 'employees',
@@ -23,6 +23,8 @@ module.exports = (connex, Sequelize) => {
             type: Sequelize.DATE,
             defaultValue: Sequelize.NOW
         }
+    }, {
+        timestamps: false
     });
     return TeamMember;
 }

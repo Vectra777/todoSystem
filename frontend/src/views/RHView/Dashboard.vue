@@ -1,6 +1,6 @@
 <template>
-  <Header />
   <div>
+    <Header />
     <div class="dashboard-wrapper py-5">
       <div class="container">
         <SearchBar
@@ -18,6 +18,7 @@
         <template v-if="!selectedEmployee">
           <AddTeamForm class="my-4" />
           <AddEmployeeForm class="my-4" />
+          <AddEmployeeToTeamForm class="my-4" />
         </template>
       </div>
     </div>
@@ -34,7 +35,7 @@
       />
       <div class="d-flex flex-wrap justify-content-center gap-4">
         <CompetenceCard
-          v-for="(skill, i) in skillItems"
+          v-for="skill in skillItems"
           :key="skill.id"
           :item="skill"
           style="flex: 1 1 calc(33.333% - 2rem); max-width: 400px"
@@ -42,18 +43,19 @@
         />
       </div>
     </div>
-  </div>
 
-  <TaskForm
-    v-if="selectedTask"
-    :task="selectedTask"
-    :lookAsHR="true"
-    :mainView="true"
-    :isCreating="selectedTask.id === null"
-    @close="selectedTask = null"
-    @save="handleSaveTask"
-  />
-  <Footer />
+    <TaskForm
+      v-if="selectedTask"
+      :task="selectedTask"
+      :lookAsHR="true"
+      :mainView="true"
+      :isCreating="selectedTask.id === null"
+      @close="selectedTask = null"
+      @save="handleSaveTask"
+      @delete="handleDeleteTask"
+    />
+    <Footer />
+  </div>
 </template>
 
 <script setup>
@@ -66,15 +68,19 @@ import SearchBar from './components/SearchBar.vue'
 import TeamList from './components/TeamList.vue'
 import AddTeamForm from './components/AddTeamForm.vue'
 import AddEmployeeForm from './components/AddEmployeeForm.vue'
+import AddEmployeeToTeamForm from './components/AddEmployeeToTeamForm.vue'
 import CompetenceFilters from './components/CompetenceFilters.vue'
 import CompetenceCard from '../../components/CompetenceCard.vue'
 import TaskForm from '../../components/TaskForm.vue'
 import { useTasksStore } from '../../stores/tasks'
 import { useUserStore } from '../../stores/user'
+import { useApiStore } from '../../stores/api'
 
 const tasksStore = useTasksStore()
 const userStore = useUserStore()
-const { tasks } = storeToRefs(tasksStore)
+const apiStore = useApiStore()
+const tasks = ref([])
+const tasksLoading = ref(false)
 
 const searchQuery = ref('')
 const selectedEmployee = ref(null)
@@ -273,13 +279,76 @@ async function handleSaveTask(updatedTask) {
       await tasksStore.createTask(updatedTask)
     }
     selectedTask.value = null
+    // Reload all competences after saving
+    await loadAllCompetences()
   } catch (error) {
     console.error('Failed to save task:', error)
+    alert('Failed to save competence: ' + (error.message || 'Unknown error'))
   }
 }
 
+async function handleDeleteTask(taskId) {
+  try {
+    await tasksStore.deleteTask(taskId)
+    selectedTask.value = null
+    // Reload all competences after deletion
+    await loadAllCompetences()
+  } catch (error) {
+    console.error('Failed to delete task:', error)
+    alert('Failed to delete competence: ' + (error.message || 'Unknown error'))
+  }
+}
+
+async function loadAllCompetences() {
+  tasksLoading.value = true
+  try {
+    const response = await apiStore.getCompetences()
+    tasks.value = response.map(comp => ({
+      id: comp.id,
+      title: comp.title,
+      content: comp.description || '',
+      label: comp.label || '',
+      status: mapStatus(comp.status),
+      progress: calculateProgress(comp.status),
+      start_date: comp.start_date,
+      end_date: comp.end_date,
+      files: [],
+      members: comp.members || [],  // Include members from API
+      teams: comp.teams || []        // Include teams from API
+    }))
+  } catch (error) {
+    console.error('Failed to load competences:', error)
+    // Fallback to tasks store if API fails
+    tasks.value = tasksStore.tasks
+  } finally {
+    tasksLoading.value = false
+  }
+}
+
+function mapStatus(backendStatus) {
+  const statusMap = {
+    'todo': 'to do',
+    'in-progress': 'in progress',
+    'in_progress': 'in progress',
+    'done': 'finished',
+    'finished': 'finished'
+  }
+  return statusMap[backendStatus] || backendStatus || 'to do'
+}
+
+function calculateProgress(status) {
+  const progressMap = {
+    'todo': 0,
+    'in-progress': 50,
+    'in_progress': 50,
+    'done': 100,
+    'finished': 100
+  }
+  return progressMap[status] || 0
+}
+
 onMounted(() => {
-  tasksStore.initialize()
+  loadAllCompetences()
   userStore.initialize()
 })
 </script>

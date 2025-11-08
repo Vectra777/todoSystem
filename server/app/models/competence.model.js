@@ -35,6 +35,8 @@ module.exports = (connex, Sequelize) => {
         }
 
       
+    }, {
+        timestamps: false
     });
     return Competence;
 }

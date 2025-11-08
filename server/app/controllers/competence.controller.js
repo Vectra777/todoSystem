@@ -6,6 +6,7 @@ const TeamTask = db.team_tasks;
 const Employee = db.employees;
 const Team = db.teams;
 const TeamMember = db.team_members;
+const File = db.files;
 const { Op } = require('sequelize');
 
 // Get all competences for a specific employee
@@ -243,21 +244,16 @@ exports.create = async (req, res) => {
           await UserTask.create({
             competence_id: competence.id,
             employee_id: member.id,
-            status: 'assigned'
+            status: 'To Do'
           });
         } else if (member.id.startsWith('t')) {
-          // It's a team - add all team members
-          const teamMembers = await db.team_members.findAll({
-            where: { team_id: member.id }
+          // It's a team - only create the TeamTask relationship
+          await TeamTask.create({
+            team_id: member.id,
+            competence_id: competence.id
           });
-          
-          return Promise.all(teamMembers.map(tm => 
-            UserTask.create({
-              competence_id: competence.id,
-              employee_id: tm.employee_id,
-              status: 'assigned'
-            })
-          ));
+          // Note: We don't automatically create UserTasks for all team members
+          // UserTasks are only for individually assigned employees
         }
       });
 
@@ -323,7 +319,7 @@ exports.update = async (req, res) => {
             await UserTask.create({
               competence_id: id,
               employee_id: employeeId,
-              status: 'assigned'
+              status: 'To Do'
             });
           }
         } else if (member.id.startsWith('t')) {
@@ -336,24 +332,8 @@ exports.update = async (req, res) => {
               competence_id: id
             }
           });
-
-          // Add all team members
-          const teamMembers = await db.team_members.findAll({
-            where: { team_id: teamId }
-          });
-          
-          for (const tm of teamMembers) {
-            newEmployeeIds.add(tm.employee_id.toString());
-            
-            if (!currentEmployeeIds.has(tm.employee_id.toString())) {
-              // Add new team member
-              await UserTask.create({
-                competence_id: id,
-                employee_id: tm.employee_id,
-                status: 'assigned'
-              });
-            }
-          }
+          // Note: We don't automatically create UserTasks for all team members
+          // UserTasks are only for individually assigned employees
         }
       }
     }
@@ -366,7 +346,7 @@ exports.update = async (req, res) => {
     // Remove team tasks that are no longer in the list
     for (const teamTask of currentTeamTasks) {
       const teamStillAssigned = req.body.members?.some(
-        member => member.id === `t${teamTask.team_id}`
+        member => member.id === teamTask.team_id
       );
       
       if (!teamStillAssigned) {
@@ -417,3 +397,42 @@ exports.update = async (req, res) => {
   }
 };
 
+// Delete a Competence
+exports.delete = async (req, res) => {
+  if (!ensureAuthenticated(req, res)) return;
+  try {
+    const id = req.params.id;
+
+    // First delete related files
+    await File.destroy({
+      where: { competence_id: id }
+    });
+
+    // Delete related user tasks
+    await UserTask.destroy({
+      where: { competence_id: id }
+    });
+
+    // Delete related team tasks
+    await TeamTask.destroy({
+      where: { competence_id: id }
+    });
+
+    // Then delete the competence
+    const deleted = await Competence.destroy({
+      where: { id: id }
+    });
+
+    if (deleted === 0) {
+      return res.status(404).send({
+        message: `Competence with id ${id} not found.`
+      });
+    }
+
+    res.status(204).send();
+  } catch (err) {
+    res.status(500).send({
+      message: err.message || "Error deleting Competence."
+    });
+  }
+};

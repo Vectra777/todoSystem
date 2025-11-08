@@ -4,6 +4,20 @@ const Employee = db.employees;
 
 const HR_ROLES = ['hr', 'rh', 'admin'];
 
+// Sanitize employee data (remove sensitive fields)
+function sanitizeEmployee(employeeInstance) {
+    if (!employeeInstance) return null;
+    const plain = employeeInstance.toJSON ? employeeInstance.toJSON() : employeeInstance;
+    return {
+        id: plain.id,
+        firstname: plain.firstname,
+        lastname: plain.lastname,
+        email: plain.email,
+        role: plain.role,
+        is_active: plain.is_active
+    };
+}
+
 // Generate next employee ID
 const generateNextEmployeeId = async () => {
     const lastEmployee = await Employee.findOne({
@@ -66,7 +80,9 @@ exports.findAll = (req, res) => {
     if (!ensureAuthenticated(req, res)) return;
     Employee.findAll()
         .then(data => {
-            res.send(data);
+            // Sanitize employee data before sending
+            const sanitized = data.map(emp => sanitizeEmployee(emp));
+            res.send(sanitized);
         })
         .catch(err => {
             res.status(500).send({

@@ -273,10 +273,24 @@ export const useApiStore = defineStore('api', {
       return this.request('/team_member')
     },
 
+    async getTeamsByEmployee(employeeId) {
+      return this.request(`/team_member/employee/${employeeId}`)
+    },
+
+    async getMembersByTeam(teamId) {
+      return this.request(`/team_member/team/${teamId}`)
+    },
+
     async createTeamMember(memberData) {
       return this.request('/team_member', {
         method: 'POST',
         body: JSON.stringify(memberData)
+      })
+    },
+
+    async removeTeamMember(teamId, employeeId) {
+      return this.request(`/team_member/${teamId}/${employeeId}`, {
+        method: 'DELETE'
       })
     },
 
@@ -297,6 +311,19 @@ export const useApiStore = defineStore('api', {
       return this.request('/competence', {
         method: 'POST',
         body: JSON.stringify(competenceData)
+      })
+    },
+
+    async updateCompetence(competenceId, competenceData) {
+      return this.request(`/competence/${competenceId}`, {
+        method: 'PUT',
+        body: JSON.stringify(competenceData)
+      })
+    },
+
+    async deleteCompetence(competenceId) {
+      return this.request(`/competence/${competenceId}`, {
+        method: 'DELETE'
       })
     },
 

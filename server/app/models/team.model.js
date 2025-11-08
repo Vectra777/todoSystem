@@ -18,6 +18,8 @@ module.exports = (connex, Sequelize) => {
             type: Sequelize.DATE,
             defaultValue: Sequelize.NOW
         }
+    }, {
+        timestamps: false
     });
     return Team;
 }

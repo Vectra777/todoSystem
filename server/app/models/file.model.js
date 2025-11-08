@@ -9,8 +9,9 @@ module.exports = (connex, Sequelize) => {
             type: Sequelize.DATE,
             defaultValue: Sequelize.NOW
         },
-       competence_ID: {
+       competence_id: {
             type: Sequelize.INTEGER,
+            field: 'competence_ID',
             references: {
                 model: 'competences',
                 key: 'id'
@@ -22,6 +23,8 @@ module.exports = (connex, Sequelize) => {
         name: {
             type: Sequelize.STRING
         }
+    }, {
+        timestamps: false
     });
     return File;
 }

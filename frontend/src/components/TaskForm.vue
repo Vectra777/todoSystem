@@ -86,10 +86,10 @@
           <template v-if="currentMode === 'edit' && !mainView">
             <select v-model="localTask.status" class="form-select" required>
               <option disabled value="">Select a status</option>
-              <option>to do</option>
-              <option>doing</option>
-              <option>finished</option>
-              <option v-if="lookAsHR">validated</option>
+              <option value="to do">To Do</option>
+              <option value="in progress">In Progress</option>
+              <option value="finished">Finished</option>
+              <option v-if="lookAsHR" value="validated">Validated</option>
             </select>
           </template>
           <template v-else>
@@ -136,13 +136,19 @@
                   @blur="hideTeamResultsDelayed"
                   class="form-control"
                   placeholder="Search teams..."
+                  :disabled="loadingTeams"
                 />
                 <div 
-                  v-if="showTeamResults && filteredTeams.length > 0"
+                  v-if="showTeamResults && (loadingTeams || filteredTeams.length > 0)"
                   class="position-absolute w-100 mt-1 bg-white border rounded shadow-sm"
                   style="max-height: 200px; overflow-y: auto; z-index: 1000;"
                 >
+                  <div v-if="loadingTeams" class="p-2 text-center text-muted">
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                    Loading teams...
+                  </div>
                   <div 
+                    v-else
                     v-for="team in filteredTeams" 
                     :key="team.id"
                     class="p-2 hover-bg-light"
@@ -187,13 +193,19 @@
                   @blur="hideEmployeeResultsDelayed"
                   class="form-control"
                   placeholder="Search employees..."
+                  :disabled="loadingEmployees"
                 />
                 <div 
-                  v-if="showEmployeeResults && filteredEmployees.length > 0"
+                  v-if="showEmployeeResults && (loadingEmployees || filteredEmployees.length > 0)"
                   class="position-absolute w-100 mt-1 bg-white border rounded shadow-sm"
                   style="max-height: 200px; overflow-y: auto; z-index: 1000;"
                 >
+                  <div v-if="loadingEmployees" class="p-2 text-center text-muted">
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                    Loading employees...
+                  </div>
                   <div 
+                    v-else
                     v-for="employee in filteredEmployees" 
                     :key="employee.id"
                     class="p-2 hover-bg-light"
@@ -353,7 +365,20 @@
     </div>
 
     <!-- Actions -->
-    <div class="d-flex justify-content-end mt-4 mb-3">
+    <div class="d-flex justify-content-between mt-4 mb-3">
+      <!-- Delete button on the left (only for HR editing existing competence) -->
+      <div>
+        <button
+          v-if="lookAsHR && mainView && task.id"
+          class="btn btn-danger"
+          type="button"
+          @click="handleDelete"
+        >
+          <i class="bi bi-trash me-1"></i> Delete
+        </button>
+      </div>
+
+      <!-- Save/Cancel buttons on the right -->
       <div v-if="currentMode === 'edit'">
         <button
           class="btn btn-secondary me-2"
@@ -377,6 +402,8 @@
 
 <script>
 import MarkdownIt from "markdown-it";
+import { useApiStore } from '../stores/api';
+
 const md = new MarkdownIt();
 
 export default {
@@ -393,22 +420,14 @@ export default {
       employeeSearchQuery: '',
       showTeamResults: false,
       showEmployeeResults: false,
-      // Mock data - à remplacer par des données du store plus tard
-      availableTeams: [
-        { id: 't1', name: 'Team Dev' },
-        { id: 't2', name: 'Team Marketing' },
-        { id: 't3', name: 'Team HR' },
-        { id: 't4', name: 'Team Sales' },
-      ],
-      availableEmployees: [
-        { id: 'e1', name: 'Alexis' },
-        { id: 'e2', name: 'Valentin' },
-        { id: 'e3', name: 'Marie' },
-        { id: 'e4', name: 'Sophie' },
-        { id: 'e5', name: 'Thomas' },
-        { id: 'e6', name: 'Lucas' },
-      ],
+      availableTeams: [],
+      availableEmployees: [],
+      loadingTeams: false,
+      loadingEmployees: false,
     };
+  },
+  async mounted() {
+    await this.loadTeamsAndEmployees();
   },
   computed: {
     isFormValid() {
@@ -416,8 +435,7 @@ export default {
         this.localTask.title &&
         this.localTask.content &&
         this.localTask.label &&
-        this.localTask.status &&
-        this.localTask.files?.length > 0
+        this.localTask.status
       );
     },
     selectedTeams() {
@@ -448,6 +466,37 @@ export default {
   methods: {
     toggleMode() {
       this.currentMode = this.currentMode === "view" ? "edit" : "view";
+    },
+    async loadTeamsAndEmployees() {
+      const apiStore = useApiStore();
+      
+      try {
+        this.loadingTeams = true;
+        const teams = await apiStore.getTeams();
+        this.availableTeams = teams.map(team => ({
+          id: team.id,
+          name: team.team_name || team.name
+        }));
+      } catch (error) {
+        console.error('Failed to load teams:', error);
+        this.availableTeams = [];
+      } finally {
+        this.loadingTeams = false;
+      }
+
+      try {
+        this.loadingEmployees = true;
+        const employees = await apiStore.getEmployees();
+        this.availableEmployees = employees.map(emp => ({
+          id: emp.id,
+          name: `${emp.firstname} ${emp.lastname}`
+        }));
+      } catch (error) {
+        console.error('Failed to load employees:', error);
+        this.availableEmployees = [];
+      } finally {
+        this.loadingEmployees = false;
+      }
     },
     addMember(member) {
       if (!this.localTask.members) {
@@ -488,15 +537,48 @@ export default {
         this.currentMode = "view";
       }
     },
+    handleDelete() {
+      if (!this.task.id) return;
+      
+      const confirmDelete = confirm(
+        `Are you sure you want to delete "${this.task.title}"?\n\nThis action cannot be undone.`
+      );
+      
+      if (confirmDelete) {
+        this.$emit("delete", this.task.id);
+      }
+    },
     renderMarkdown(text) {
       return text ? md.render(text) : "";
     },
     normalizeTask(task) {
       if (!task) return { files: [], members: [] };
+      
+      // Build members array from both API members (employees) and teams
+      let members = [];
+      
+      // Add employees from the members array
+      if (Array.isArray(task.members)) {
+        members = task.members.map(emp => ({
+          id: emp.id,
+          name: emp.firstname && emp.lastname ? `${emp.firstname} ${emp.lastname}` : emp.name || emp.id,
+          status: emp.status
+        }));
+      }
+      
+      // Add teams from the teams array
+      if (Array.isArray(task.teams)) {
+        const teamMembers = task.teams.map(team => ({
+          id: team.id,
+          name: team.team_name || team.name || team.id
+        }));
+        members = [...members, ...teamMembers];
+      }
+      
       const copy = {
         ...task,
         files: Array.isArray(task.files) ? [...task.files] : [],
-        members: Array.isArray(task.members) ? [...task.members] : [],
+        members: members,
       };
       if (copy.start_date)
         copy.start_date = this.normalizeDateForInput(copy.start_date);

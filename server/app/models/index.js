@@ -40,6 +40,23 @@ db.employees.belongsToMany(db.teams, {
     otherKey: 'team_id'
 });
 
+// Direct associations with team_members junction table
+db.team_members.belongsTo(db.employees, {
+    foreignKey: 'employee_id'
+});
+
+db.team_members.belongsTo(db.teams, {
+    foreignKey: 'team_id'
+});
+
+db.employees.hasMany(db.team_members, {
+    foreignKey: 'employee_id'
+});
+
+db.teams.hasMany(db.team_members, {
+    foreignKey: 'team_id'
+});
+
 // Files & Competences (One-to-Many)
 db.competences.hasMany(db.files, {
     foreignKey: 'competence_ID'
@@ -72,6 +89,40 @@ db.competences.belongsToMany(db.teams, {
     through: db.team_tasks,
     foreignKey: 'competence_id',
     otherKey: 'team_id'
+});
+
+// Direct associations with team_tasks junction table
+db.team_tasks.belongsTo(db.teams, {
+    foreignKey: 'team_id'
+});
+
+db.team_tasks.belongsTo(db.competences, {
+    foreignKey: 'competence_id'
+});
+
+db.teams.hasMany(db.team_tasks, {
+    foreignKey: 'team_id'
+});
+
+db.competences.hasMany(db.team_tasks, {
+    foreignKey: 'competence_id'
+});
+
+// Direct associations with user_tasks junction table
+db.user_tasks.belongsTo(db.employees, {
+    foreignKey: 'employee_id'
+});
+
+db.user_tasks.belongsTo(db.competences, {
+    foreignKey: 'competence_id'
+});
+
+db.employees.hasMany(db.user_tasks, {
+    foreignKey: 'employee_id'
+});
+
+db.competences.hasMany(db.user_tasks, {
+    foreignKey: 'competence_id'
 });
 
 module.exports = db;
