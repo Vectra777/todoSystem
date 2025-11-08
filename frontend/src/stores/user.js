@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 
 const USER_STORAGE_KEY = 'todo-current-user'
 const DEFAULT_ROLE = 'admin'
-const VALID_ROLES = ['employee', 'admin']
+const VALID_ROLES = ['employee', 'admin','hr']
 
 function readStoredUser() {
   if (typeof window === 'undefined') return null
@@ -44,6 +44,7 @@ export const useUserStore = defineStore('user', {
   }),
   getters: {
     isAdmin: (state) => state.role === 'admin',
+    isHr: (state) => state.role === 'hr',
     isEmployee: (state) => state.role === 'employee',
     isAuthenticated: (state) => !!state.token,
     displayName: (state) => {

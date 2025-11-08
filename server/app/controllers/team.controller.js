@@ -1,8 +1,22 @@
 const db = require('../models');
+const { ensureAuthenticated } = require('../authentication/utils');
 const Team = db.teams;
+
+// Generate next team ID
+const generateNextTeamId = async () => {
+    const lastTeam = await Team.findOne({
+        order: [['id', 'DESC']]
+    });
+    if (!lastTeam) {
+        return 't1';
+    }
+    const lastNumber = parseInt(lastTeam.id.substring(1));
+    return `t${lastNumber + 1}`;
+};
 
 // Create a new Team
 exports.create = async (req, res) => {
+    if (!ensureAuthenticated(req, res)) return;
     // Validate request
     if (!req.body.team_name) {
         res.status(400).send({
@@ -10,18 +24,6 @@ exports.create = async (req, res) => {
         });
         return;
     }
-
-    // Generate next team ID
-    const generateNextTeamId = async () => {
-        const lastTeam = await Team.findOne({
-            order: [['id', 'DESC']]
-        });
-        if (!lastTeam) {
-            return 't1';
-        }
-        const lastNumber = parseInt(lastTeam.id.substring(1));
-        return `t${lastNumber + 1}`;
-    };
 
     // Create a Team
     const team = {
@@ -42,6 +44,7 @@ exports.create = async (req, res) => {
 };
 
 exports.findAll = (req, res) => {
+    if (!ensureAuthenticated(req, res)) return;
     Team.findAll()
         .then(data => {
             res.send(data);

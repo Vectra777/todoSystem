@@ -25,3 +25,11 @@ npm run build
 
 - Toggle the moon button in the header to switch themes (preference persists after reload).
 - Visit `/dashboard` and drag competences between columns—the move persists to the next refresh.
+
+
+## Register an admin on website
+```bash
+curl -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"firstname":"Admin","lastname":"User","email":"admin@test.com","password":"admin123","role":"admin"}'
+```

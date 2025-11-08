@@ -1,7 +1,15 @@
 const db = require('../models');
+const { ensureAuthenticated } = require('../authentication/utils');
 const UserTask = db.user_tasks;
 
+const HR_ROLES = ['hr', 'rh', 'admin'];
+
 exports.findAll = (req, res) => {
+    if (!ensureAuthenticated(req, res)) return;
+    const role = (req.user?.role || '').toLowerCase();
+    if (!HR_ROLES.includes(role)) {
+        return res.status(403).send({ message: 'Forbidden: HR role required' });
+    }
     UserTask.findAll()
         .then(data => {
             res.send(data);
@@ -16,13 +24,13 @@ exports.findAll = (req, res) => {
 
 // Employee updates their own task for a competence
 exports.updateByEmployee = async (req, res) => {
+    if (!ensureAuthenticated(req, res)) return;
     const competenceId = req.params.competenceId;
-
-    const employeeId = req.headers['x-employee-id'] || req.headers['x-user-id'];
+    const employeeId = req.user?.id;
     const { status, employee_review } = req.body;
 
     if (!employeeId) {
-        return res.status(400).send({ message: 'Employee id is required in header x-employee-id' });
+        return res.status(403).send({ message: 'Forbidden: invalid authentication context' });
     }
 
     try {
@@ -44,13 +52,13 @@ exports.updateByEmployee = async (req, res) => {
 
 // HR updates a user's task (requires HR role)
 exports.updateByHR = async (req, res) => {
+    if (!ensureAuthenticated(req, res)) return;
     const competenceId = req.params.competenceId;
     const employeeId = req.params.employeeId;
     const { status, employee_review, hr_review } = req.body;
 
-    // Simple role check: expect caller role in header 'x-user-role'
-    const callerRole = (req.headers['x-user-role'] || '').toLowerCase();
-    if (!['hr','rh','admin'].includes(callerRole)) {
+    const callerRole = (req.user?.role || '').toLowerCase();
+    if (!HR_ROLES.includes(callerRole)) {
         return res.status(403).send({ message: 'Forbidden: HR role required' });
     }
 

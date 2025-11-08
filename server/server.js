@@ -2,6 +2,9 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 
+// Load environment variables
+require('dotenv').config();
+
 const app = express();
 
 
@@ -21,13 +24,12 @@ app.get('/', (req, res) => {
   res.send('Hello World!');
 });
 
-
+// Routes (auth + CRUD)
 require('./app/routes/employee.route.js')(app);
 require('./app/routes/team.route.js')(app);
 require('./app/routes/team_member.route.js')(app);
 require('./app/routes/competence.route.js')(app);
 require('./app/routes/user_task.route.js')(app);
-require('./app/routes/employee.route.js')(app);
 require('./app/routes/search.route.js')(app);
 
 const PORT = 8080;

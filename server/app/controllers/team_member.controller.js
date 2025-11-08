@@ -1,4 +1,5 @@
 const db = require('../models');
+const { ensureAuthenticated } = require('../authentication/utils');
 const TeamMember = db.team_members;
 const Employee = db.employees;
 const Team = db.teams;
@@ -7,6 +8,7 @@ const UserTask = db.user_tasks;
 
 // Create a new Team Member
 exports.create = async (req, res) => {
+    if (!ensureAuthenticated(req, res)) return;
     // Validate request
     if (!req.body.team_id || !req.body.employee_id || !req.body.role) {
         res.status(400).send({
@@ -99,6 +101,7 @@ exports.create = async (req, res) => {
 };
 
 exports.findAll = (req, res) => {
+    if (!ensureAuthenticated(req, res)) return;
     TeamMember.findAll()
         .then(data => {
             res.send(data);

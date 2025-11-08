@@ -2,11 +2,21 @@
   <div class="first-section text-center text-white p-5">
     <h1>Welcome to <b>ToDo</b></h1>
     <div id="typewriter"></div>
+    <router-link 
+              v-if="!userStore.isAuthenticated"
+              to="/login" 
+              
+              active-class="active"
+            >
     <div class="connection-badge d-inline-block mt-3">Log In</div>
+    </router-link>
   </div>
 </template>
 
 <script>
+import { mapStores } from 'pinia';
+import { useUserStore } from '../../stores/user';
+
 export default {
   name: "HomeView",
   data() {
@@ -18,6 +28,9 @@ export default {
       typewriterActive: true,
       typingSpeed: 50
     };
+  },
+  computed: {
+    ...mapStores(useUserStore),
   },
   mounted() {
     this.startTypewriter();

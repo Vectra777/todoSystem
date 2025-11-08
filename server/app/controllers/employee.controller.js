@@ -1,11 +1,31 @@
 const db = require('../models');
+const { ensureAuthenticated, hashPassword } = require('../authentication/utils');
 const Employee = db.employees;
+
+const HR_ROLES = ['hr', 'rh', 'admin'];
+
+// Generate next employee ID
+const generateNextEmployeeId = async () => {
+    const lastEmployee = await Employee.findOne({
+        order: [['created_at', 'DESC']],
+        attributes: ['id']
+    });
+
+    if (!lastEmployee || !/^e\d+$/i.test(lastEmployee.id)) {
+        return 'e1';
+    }
+
+    const currentNumber = parseInt(lastEmployee.id.slice(1), 10) || 0;
+    return `e${currentNumber + 1}`;
+};
 
 // Create a new Employee
 exports.create = async (req, res) => {
-    // if (!validHRToken(req.token)) {
-    //     return res.status(403).send({ message: "Forbidden" });
-    // }
+    if (!ensureAuthenticated(req, res)) return;
+    const callerRole = (req.user?.role || '').toLowerCase();
+    if (!HR_ROLES.includes(callerRole)) {
+        return res.status(403).send({ message: 'Forbidden: HR role required' });
+    }
 
     // Validate request
     if (!req.body.firstname || !req.body.lastname || !req.body.email) {
@@ -15,47 +35,35 @@ exports.create = async (req, res) => {
         return;
     }
 
-    let password = 'password';
-    let password_hash = password;
-    //let passwor_hash = createHashedPassword(password);
+    try {
+        // Hash the password
+        const password = req.body.password || 'password';
+        const password_hash = await hashPassword(password);
 
-    // Generate next employee ID
-    const generateNextEmployeeId = async () => {
-        const lastEmployee = await Employee.findOne({
-            order: [['id', 'DESC']]
+        // Create an Employee
+        const employee = {
+            id: await generateNextEmployeeId(),
+            firstname: req.body.firstname,
+            lastname: req.body.lastname,
+            email: req.body.email,
+            password_hash: password_hash,
+            role: req.body.role || 'employee',
+            is_active: false
+        };
+
+        // Save Employee in the database
+        const data = await Employee.create(employee);
+        res.send(data);
+    } catch (err) {
+        res.status(500).send({
+            message: err.message || "Some error occurred while creating the Employee."
         });
-        if (!lastEmployee) {
-            return 'e1';
-        }
-        const lastNumber = parseInt(lastEmployee.id.substring(1));
-        return `e${lastNumber + 1}`;
-    };
-
-    // Create an Employee
-    const employee = {
-        id: await generateNextEmployeeId(),
-        firstname: req.body.firstname,
-        lastname: req.body.lastname,
-        email: req.body.email,
-        password_hash: password_hash,
-        role: req.body.role || 'employee',
-        is_active: false
-    };
-
-    // Save Employee in the database
-    Employee.create(employee)
-        .then(data => {
-            res.send(data);
-        })
-        .catch(err => {
-            res.status(500).send({
-                message: err.message || "Some error occurred while creating the Employee."
-            });
-        });
+    }
 };
 
 // Retrieve all Employees
 exports.findAll = (req, res) => {
+    if (!ensureAuthenticated(req, res)) return;
     Employee.findAll()
         .then(data => {
             res.send(data);

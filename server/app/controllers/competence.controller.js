@@ -1,4 +1,5 @@
 const db = require("../models");
+const { ensureAuthenticated } = require('../authentication/utils');
 const Competence = db.competences;
 const UserTask = db.user_tasks;
 const TeamTask = db.team_tasks;
@@ -9,6 +10,7 @@ const { Op } = require('sequelize');
 
 // Get all competences for a specific employee
 exports.findByEmployee = async (req, res) => {
+  if (!ensureAuthenticated(req, res)) return;
   const employeeId = req.params.employeeId;
 
   try {
@@ -62,6 +64,7 @@ exports.findByEmployee = async (req, res) => {
 
 // Get all competences for a team with progress percentage
 exports.findByTeam = async (req, res) => {
+  if (!ensureAuthenticated(req, res)) return;
     const teamId = req.params.teamId;
 
     try {
@@ -141,6 +144,7 @@ exports.findByTeam = async (req, res) => {
 };
 
 exports.findAll = async (req, res) => {
+  if (!ensureAuthenticated(req, res)) return;
   try {
     const competences = await Competence.findAll({
       include: [
@@ -212,6 +216,7 @@ exports.findAll = async (req, res) => {
 };
 
 exports.create = async (req, res) => {
+  if (!ensureAuthenticated(req, res)) return;
   try {
     // Validate request
     if (!req.body.title) {
@@ -281,6 +286,7 @@ exports.create = async (req, res) => {
 
 // Update a Competence
 exports.update = async (req, res) => {
+  if (!ensureAuthenticated(req, res)) return;
   try {
     const id = req.params.id;
 

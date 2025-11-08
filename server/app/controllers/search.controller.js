@@ -1,4 +1,5 @@
 const db = require("../models");
+const { ensureAuthenticated } = require('../authentication/utils');
 const Team = db.teams;
 const Employee = db.employees;
 const { Op, fn, col, where } = db.Sequelize;
@@ -34,6 +35,7 @@ function similarityScore(a, b) {
 }
 
 exports.fuzzy = async (req, res) => {
+  if (!ensureAuthenticated(req, res)) return;
   const q = (req.query.q || "").trim();
   if (!q)
     return res.status(400).send({ message: "Query parameter q is required" });
