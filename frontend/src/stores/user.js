@@ -44,7 +44,7 @@ export const useUserStore = defineStore('user', {
   }),
   getters: {
     isAdmin: (state) => state.role === 'admin',
-    isHr: (state) => state.role === 'hr',
+    isHr: (state) => state.role === 'hr' || state.role === 'admin', // Admin can also act as HR
     isEmployee: (state) => state.role === 'employee',
     isAuthenticated: (state) => !!state.token,
     displayName: (state) => {

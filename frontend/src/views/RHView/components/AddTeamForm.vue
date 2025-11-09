@@ -102,6 +102,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useApiStore } from '../../../stores/api'
 
 const apiStore = useApiStore()
+const emit = defineEmits(['team-created'])
 
 // Form data
 const teamName = ref('')
@@ -179,6 +180,9 @@ async function handleSubmit() {
     // Create the team via API
     const createdTeam = await apiStore.createTeam(teamData)
     
+    // Emit event to parent
+    emit('team-created', createdTeam)
+    
     // If a leader was selected, add them to the team with 'lead' role
     if (selectedLeader.value && createdTeam.id) {
       try {
@@ -195,6 +199,9 @@ async function handleSubmit() {
     } else {
       successMessage.value = 'Team created successfully!'
     }
+    
+    // Reload employees list in case leader was added
+    await loadEmployees()
     
     // Reset form
     teamName.value = ''

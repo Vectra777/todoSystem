@@ -116,6 +116,7 @@ const itemObj = computed(() => ({
   status: props.item?.status ?? 'to do',
   files: props.item?.files ?? [],
   members: props.item?.members ?? [],
+  teams: props.item?.teams ?? [],
   commentEmployee: props.item?.commentEmployee ?? '',
   commentHR: props.item?.commentHR ?? '',
 }))
@@ -140,8 +141,19 @@ const progressColor = computed(() => {
   return 'green'
 })
 
-const isHRRoute = computed(() => route.matched?.some(r => r.meta && r.meta.requiresAdmin))
-const showProgress = computed(() => userStore.isAdmin && isHRRoute.value)
+const isHRRoute = computed(() => route.matched?.some(r => r.meta && r.meta.requiresHR))
+const showProgress = computed(() => {
+  const result = userStore.isHr && isHRRoute.value
+  console.log('CompetenceCard showProgress:', {
+    isHr: userStore.isHr,
+    isHRRoute: isHRRoute.value,
+    showProgress: result,
+    progress: itemObj.value.progress,
+    route: route.path,
+    routeMeta: route.matched?.map(r => r.meta)
+  })
+  return result
+})
 
 function onDragStart(e) {
   e.dataTransfer.effectAllowed = 'move'

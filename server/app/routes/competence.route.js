@@ -14,6 +14,9 @@ module.exports = (app) => {
     // Get competences for a specific team with progress
     router.get('/team/:teamId', competence.findByTeam);
 
+    // Get progress percentage for a specific competence
+    router.get('/:id/progress', competence.getProgress);
+
     // Update a Competence
     router.put('/:id', competence.update);
 

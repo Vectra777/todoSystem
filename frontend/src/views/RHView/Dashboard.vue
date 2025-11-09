@@ -9,6 +9,7 @@
           @item-selected="handleEmployeeSelected"
         />
         <TeamList
+          :key="teamListKey"
           class="my-4"
           :selected-employee="selectedEmployee"
           :all-employees="fakeEmployees"
@@ -16,9 +17,9 @@
         />
 
         <template v-if="!selectedEmployee">
-          <AddTeamForm class="my-4" />
-          <AddEmployeeForm class="my-4" />
-          <AddEmployeeToTeamForm class="my-4" />
+          <AddTeamForm class="my-4" @team-created="handleTeamCreated" />
+          <AddEmployeeForm class="my-4" @employee-created="handleEmployeeCreated" />
+          <AddEmployeeToTeamForm class="my-4" @member-added="handleMemberAdded" />
         </template>
       </div>
     </div>
@@ -81,6 +82,7 @@ const userStore = useUserStore()
 const apiStore = useApiStore()
 const tasks = ref([])
 const tasksLoading = ref(false)
+const teamListKey = ref(0) // Key to force TeamList refresh
 
 const searchQuery = ref('')
 const selectedEmployee = ref(null)
@@ -309,7 +311,7 @@ async function loadAllCompetences() {
       content: comp.description || '',
       label: comp.label || '',
       status: mapStatus(comp.status),
-      progress: calculateProgress(comp.status),
+      progress: comp.progress || 0,  // Use backend-calculated progress
       start_date: comp.start_date,
       end_date: comp.end_date,
       files: [],
@@ -345,6 +347,23 @@ function calculateProgress(status) {
     'finished': 100
   }
   return progressMap[status] || 0
+}
+
+function handleTeamCreated(team) {
+  console.log('Team created:', team)
+  // Force TeamList to refresh
+  teamListKey.value++
+}
+
+function handleEmployeeCreated(employee) {
+  console.log('Employee created:', employee)
+  // No need to refresh TeamList for employee creation alone
+}
+
+function handleMemberAdded(data) {
+  console.log('Member added to team:', data)
+  // Force TeamList to refresh
+  teamListKey.value++
 }
 
 onMounted(() => {

@@ -412,25 +412,19 @@ export const useTasksStore = defineStore("tasks", {
         const apiStore = useApiStore();
         const userStore = useUserStore();
 
-        // If status is being updated by an employee, update the UserTask
-        if (partial.status && userStore.id && !userStore.isHr) {
-          try {
-            // Map frontend status to backend status
-            const backendStatus = this.mapStatusToBackend(partial.status);
-            await apiStore.updateMyTask(id, {
-              status: backendStatus
-            });
-            
-            // Update progress based on status
-            partial.progress = this.calculateProgress(backendStatus);
-          } catch (statusError) {
-            console.warn('Failed to update task status:', statusError);
-            throw statusError;
-          }
-        }
+        console.log('updateTask called:', { 
+          id, 
+          partial, 
+          userRole: userStore.role,
+          isHr: userStore.isHr, 
+          userId: userStore.id,
+          hasStatus: !!partial.status,
+          hasTitle: !!partial.title
+        });
 
         // If HR is updating the competence details
         if (userStore.isHr) {
+          console.log('Taking HR update path - updating competence metadata');
           const competenceData = {
             title: partial.title,
             description: partial.content || partial.description,
@@ -439,9 +433,29 @@ export const useTasksStore = defineStore("tasks", {
             end_date: partial.end_date,
             members: partial.members || []
           };
+          console.log('Calling updateCompetence with:', competenceData);
           await apiStore.updateCompetence(id, competenceData);
         }
+        // If status is being updated by an employee, update the UserTask
+        else if (partial.status && userStore.id) {
+          console.log('Taking Employee update path - updating user task status');
+          try {
+            // Map frontend status to backend status
+            const backendStatus = this.mapStatusToBackend(partial.status);
+            console.log('Calling updateMyTask with status:', backendStatus);
+            await apiStore.updateMyTask(id, {
+              status: backendStatus
+            });
+            
+            // Update progress based on status
+            partial.progress = this.calculateProgress(backendStatus);
+          } catch (statusError) {
+            console.error('Failed to update task status:', statusError);
+            throw statusError;
+          }
+        }
         
+        console.log('Updating local store');
         // Update local store
         const index = this.items.findIndex(
           (task) => String(task.id) === String(id)

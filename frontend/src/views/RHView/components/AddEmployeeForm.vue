@@ -74,6 +74,7 @@ import { ref } from 'vue'
 import { useApiStore } from '../../../stores/api'
 
 const apiStore = useApiStore()
+const emit = defineEmits(['employee-created'])
 
 const formData = ref({
   firstname: '',
@@ -95,6 +96,9 @@ async function handleSubmit() {
     const employee = await apiStore.createEmployee(formData.value)
     message.value = `Employee ${employee.firstname} ${employee.lastname} created successfully!`
     messageType.value = 'success'
+    
+    // Emit event to parent
+    emit('employee-created', employee)
     
     // Reset form
     formData.value = {

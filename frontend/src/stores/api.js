@@ -307,6 +307,10 @@ export const useApiStore = defineStore('api', {
       return this.request(`/competence/team/${teamId}`)
     },
 
+    async getCompetenceProgress(competenceId) {
+      return this.request(`/competence/${competenceId}/progress`)
+    },
+
     async createCompetence(competenceData) {
       return this.request('/competence', {
         method: 'POST',

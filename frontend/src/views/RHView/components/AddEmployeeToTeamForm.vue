@@ -136,6 +136,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useApiStore } from '../../../stores/api'
 
 const apiStore = useApiStore()
+const emit = defineEmits(['member-added'])
 
 // Employee data
 const employees = ref([])
@@ -253,6 +254,12 @@ async function handleSubmit() {
     await apiStore.createTeamMember(memberData)
     
     successMessage.value = `Successfully added ${selectedEmployee.value.firstname} ${selectedEmployee.value.lastname} to ${selectedTeam.value.team_name}!`
+    
+    // Emit event to parent
+    emit('member-added', { employee: selectedEmployee.value, team: selectedTeam.value, role: role.value })
+    
+    // Reload data to reflect changes
+    await Promise.all([loadEmployees(), loadTeams()])
     
     // Reset form
     selectedEmployee.value = null

@@ -196,6 +196,22 @@ exports.findAll = async (req, res) => {
         };
       });
 
+      // Calculate progress: To Do = 0, In Progress = 0.5, Completed = 1
+      const statusValues = {
+        'To Do': 0,
+        'In Progress': 0.5,
+        'Completed': 1,
+        'Validated': 1
+      };
+
+      let totalProgress = 0;
+      members.forEach(member => {
+        const progressValue = statusValues[member.status] || 0;
+        totalProgress += progressValue;
+      });
+
+      const progress = members.length > 0 ? Math.round((totalProgress / members.length) * 100) : 0;
+
       return {
         id: c.id,
         title: c.title,
@@ -203,6 +219,7 @@ exports.findAll = async (req, res) => {
         start_date: c.start_date,
         end_date: c.end_date,
         label: c.label,
+        progress: progress,
         members,
         teams
       };
@@ -212,6 +229,86 @@ exports.findAll = async (req, res) => {
   } catch (err) {
     res.status(500).send({
       message: err.message || "Some error occurred while retrieving competences.",
+    });
+  }
+};
+
+// Get progress percentage for a specific competence
+exports.getProgress = async (req, res) => {
+  if (!ensureAuthenticated(req, res)) return;
+  
+  try {
+    const id = req.params.id;
+
+    // Get the competence with all assigned employees
+    const competence = await Competence.findByPk(id, {
+      include: [{
+        model: Employee,
+        through: {
+          model: UserTask,
+          attributes: ['status']
+        },
+        attributes: ['id', 'firstname', 'lastname']
+      }]
+    });
+
+    if (!competence) {
+      return res.status(404).send({
+        message: `Competence with id ${id} not found.`
+      });
+    }
+
+    // Get all member statuses
+    const members = competence.employees || [];
+    
+    if (members.length === 0) {
+      return res.send({
+        competence_id: id,
+        progress: 0,
+        total_members: 0,
+        members: []
+      });
+    }
+
+    // Calculate progress: To Do = 0, In Progress = 0.5, Completed = 1
+    const statusValues = {
+      'To Do': 0,
+      'In Progress': 0.5,
+      'Completed': 1,
+      'Validated': 1
+    };
+
+    let totalProgress = 0;
+    const memberProgress = members.map(emp => {
+      const throughData = emp.user_tasks || emp.user_taskses || null;
+      const status = throughData?.status || 'To Do';
+      const progressValue = statusValues[status] || 0;
+      totalProgress += progressValue;
+      
+      return {
+        id: emp.id,
+        name: `${emp.firstname} ${emp.lastname}`,
+        status: status,
+        progress: progressValue
+      };
+    });
+
+    // Calculate percentage (0-100)
+    const percentage = (totalProgress / members.length) * 100;
+
+    res.send({
+      competence_id: id,
+      progress: Math.round(percentage * 10) / 10, // Round to 1 decimal place
+      total_members: members.length,
+      completed_count: memberProgress.filter(m => m.progress === 1).length,
+      in_progress_count: memberProgress.filter(m => m.progress === 0.5).length,
+      todo_count: memberProgress.filter(m => m.progress === 0).length,
+      members: memberProgress
+    });
+
+  } catch (err) {
+    res.status(500).send({
+      message: err.message || "Error calculating competence progress."
     });
   }
 };
