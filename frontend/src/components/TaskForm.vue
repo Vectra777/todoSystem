@@ -4,7 +4,6 @@
     class="position-fixed top-0 end-0 border-start p-4 bg-body-tertiary shadow"
     style="width: 500px; height: 100vh; z-index: 200000; overflow-y: auto"
   >
-    <!-- Header -->
     <h5 class="d-flex align-items-center justify-content-between mb-4">
       <span>{{ task.title }} task</span>
       <div>
@@ -24,11 +23,9 @@
       </div>
     </h5>
 
-    <!-- General Information -->
     <div class="card mb-4">
       <div class="card-header fw-semibold">General Information</div>
       <div class="card-body">
-        <!-- Title -->
         <div class="mb-3">
           <label class="form-label">Title</label>
           <template v-if="currentMode === 'edit' && mainView">
@@ -44,7 +41,6 @@
           </template>
         </div>
 
-        <!-- Description -->
         <div class="mb-3">
           <label class="form-label">Description</label>
           <template v-if="currentMode === 'edit' && mainView">
@@ -64,7 +60,6 @@
           </template>
         </div>
 
-        <!-- Label -->
         <div class="mb-3">
           <label class="form-label">Label</label>
           <template v-if="currentMode === 'edit' && mainView">
@@ -80,7 +75,6 @@
           </template>
         </div>
 
-        <!-- Status -->
         <div class="mb-3" v-if="!mainView">
           <label class="form-label">Status</label>
           <template v-if="currentMode === 'edit' && !mainView">
@@ -98,17 +92,14 @@
         </div>
       </div>
     </div>
-    <!-- Add member or team -->
     <div class="card mb-4" v-if="mainView">
       <div class="card-header fw-semibold">Members</div>
       <div class="card-body">
         <div class="mb-3">
           <template v-if="currentMode === 'edit' && mainView">
-            <!-- Teams Section -->
             <div class="mb-4">
               <label class="form-label">Teams</label>
               
-              <!-- Selected Teams -->
               <div v-if="selectedTeams.length > 0" class="mb-2 d-flex flex-wrap gap-2">
                 <span 
                   v-for="team in selectedTeams" 
@@ -127,7 +118,6 @@
                 </span>
               </div>
 
-              <!-- Team Search Bar -->
               <div class="position-relative">
                 <input 
                   type="text"
@@ -161,11 +151,9 @@
               </div>
             </div>
 
-            <!-- Employees Section -->
             <div>
               <label class="form-label">Employees</label>
               
-              <!-- Selected Employees -->
               <div v-if="selectedEmployees.length > 0" class="mb-2 d-flex flex-wrap gap-2">
                 <span 
                   v-for="employee in selectedEmployees" 
@@ -184,7 +172,6 @@
                 </span>
               </div>
 
-              <!-- Employee Search Bar -->
               <div class="position-relative">
                 <input 
                   type="text"
@@ -241,7 +228,6 @@
         </div>
       </div>
     </div>
-    <!-- Dates -->
     <div class="card mb-4">
       <div class="card-header fw-semibold">Dates</div>
       <div class="card-body">
@@ -275,7 +261,6 @@
       </div>
     </div>
 
-    <!-- Comments -->
     <div class="card mb-4" v-if="!mainView">
       <div class="card-header fw-semibold">Comments</div>
       <div class="card-body">
@@ -315,7 +300,6 @@
       </div>
     </div>
 
-    <!-- Files -->
     <div class="card mb-4">
       <div class="card-header fw-semibold">Attached Files</div>
       <div class="card-body">
@@ -387,9 +371,7 @@
       </div>
     </div>
 
-    <!-- Actions -->
     <div class="d-flex justify-content-between mt-4 mb-3">
-      <!-- Delete button on the left (only for HR editing existing competence) -->
       <div>
         <button
           v-if="lookAsHR && mainView && task.id"
@@ -401,7 +383,6 @@
         </button>
       </div>
 
-      <!-- Save/Cancel buttons on the right -->
       <div v-if="currentMode === 'edit'">
         <button
           class="btn btn-secondary me-2"
@@ -460,20 +441,24 @@ export default {
   },
   computed: {
     isFormValid() {
+      // Simplification of validity check, adjust as needed
       return (
         this.localTask.title &&
         this.localTask.content &&
         this.localTask.label &&
-        this.localTask.status
+        (this.mainView || this.localTask.status) // Status is required only if not mainView
       );
     },
     selectedTeams() {
       if (!this.localTask.members) return [];
-      return this.localTask.members.filter(m => m.id && m.id[0] === 't');
+      // Teams are identified by their ID structure (e.g., starting with 't')
+      return this.localTask.members.filter(m => m.id && String(m.id).startsWith('t'));
     },
     selectedEmployees() {
       if (!this.localTask.members) return [];
-      return this.localTask.members.filter(m => m.id && m.id[0] === 'e');
+      // Employees are identified by their ID structure (e.g., starting with 'e' or being purely numeric if IDs are integers)
+      // Assuming employee IDs start with 'e' or are numeric, and team IDs start with 't'
+      return this.localTask.members.filter(m => m.id && String(m.id).startsWith('e'));
     },
     filteredTeams() {
       if (!this.teamSearchQuery.trim()) return this.availableTeams;
@@ -503,7 +488,7 @@ export default {
         this.loadingTeams = true;
         const teams = await apiStore.getTeams();
         this.availableTeams = teams.map(team => ({
-          id: team.id,
+          id: String(team.id).startsWith('t') ? team.id : `t${team.id}`, // Ensure team ID format consistency
           name: team.team_name || team.name
         }));
       } catch (error) {
@@ -517,7 +502,7 @@ export default {
         this.loadingEmployees = true;
         const employees = await apiStore.getEmployees();
         this.availableEmployees = employees.map(emp => ({
-          id: emp.id,
+          id: String(emp.id).startsWith('e') ? emp.id : `e${emp.id}`, // Ensure employee ID format consistency
           name: `${emp.firstname} ${emp.lastname}`
         }));
       } catch (error) {
@@ -537,7 +522,7 @@ export default {
         this.localTask.members.push({ ...member });
       }
       // Clear search and hide results
-      if (member.id[0] === 't') {
+      if (String(member.id).startsWith('t')) {
         this.teamSearchQuery = '';
         this.showTeamResults = false;
       } else {
@@ -550,17 +535,21 @@ export default {
         this.localTask.members = this.localTask.members.filter(m => m.id !== memberId);
       }
     },
+    // FIX APPLIQUÉE ICI : Augmenter le délai pour éviter le conflit blur/mousedown
     hideTeamResultsDelayed() {
       setTimeout(() => {
         this.showTeamResults = false;
-      }, 200);
+      }, 400); 
     },
+    // FIX APPLIQUÉE ICI : Augmenter le délai pour éviter le conflit blur/mousedown
     hideEmployeeResultsDelayed() {
       setTimeout(() => {
         this.showEmployeeResults = false;
-      }, 200);
+      }, 400); 
     },
     handleSave() {
+      // Ensure members list contains only IDs for submission if the backend expects it
+      // For this example, we save the full object list
       if (this.isFormValid) {
         this.$emit("save", this.localTask);
         this.currentMode = "view";
@@ -583,13 +572,12 @@ export default {
     normalizeTask(task) {
       if (!task) return { files: [], members: [] };
       
-      // Build members array from both API members (employees) and teams
       let members = [];
       
       // Add employees from the members array
       if (Array.isArray(task.members)) {
         members = task.members.map(emp => ({
-          id: emp.id,
+          id: String(emp.id).startsWith('e') ? emp.id : `e${emp.id}`, // Ensure ID starts with 'e'
           name: emp.firstname && emp.lastname ? `${emp.firstname} ${emp.lastname}` : emp.name || emp.id,
           status: emp.status
         }));
@@ -598,7 +586,7 @@ export default {
       // Add teams from the teams array
       if (Array.isArray(task.teams)) {
         const teamMembers = task.teams.map(team => ({
-          id: team.id,
+          id: String(team.id).startsWith('t') ? team.id : `t${team.id}`, // Ensure ID starts with 't'
           name: team.team_name || team.name || team.id
         }));
         members = [...members, ...teamMembers];

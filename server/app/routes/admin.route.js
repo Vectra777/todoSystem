@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const companyController = require('../controllers/company.controller');
 const employeeController = require('../controllers/employee.controller');
 
 // Simple protection: allow only localhost unless MONITOR_TOKEN is set
@@ -36,7 +37,7 @@ router.get('/admin-panel', localOnlyOrToken, (req, res) => {
       </head>
       <body>
         <div class="card">
-          <h2>Create Admin</h2>
+          <h2>Create Company and first Admin</h2>
           <form method="POST" action="/admin-panel/create" style="margin-right:20px">
             <label>First name</label>
             <input name="firstname" required />
@@ -46,7 +47,9 @@ router.get('/admin-panel', localOnlyOrToken, (req, res) => {
             <input name="email" type="email" required />
             <label>Password (optional)</label>
             <input name="password" type="password" />
-            <button type="submit" style="text-align:center;margin-left:10px">Create Admin</button>
+            <label>Company Name</label>
+            <input name="company" type="text" required/>
+            <button type="submit" style="text-align:center;margin-left:10px">Create new company</button>
           </form>
         </div>
       </body>
@@ -58,6 +61,7 @@ router.get('/admin-panel', localOnlyOrToken, (req, res) => {
 router.post('/admin-panel/create', localOnlyOrToken, express.urlencoded({ extended: true }), async (req, res) => {
   try {
     // Delegate to controller's createAdmin (it will also allow localhost)
+    await companyController.createCompany(req, res);
     await employeeController.createAdmin(req, res);
   } catch (err) {
     res.status(500).send('Internal error: ' + (err.message || 'unknown'));

@@ -161,7 +161,6 @@ exports.findAll = async (req, res) => {
           model: Team,
           through: {
             model: TeamTask,
-            attributes: ['created_at', 'start_date', 'end_date']
           },
           attributes: ['id', 'team_name', 'description']
         }

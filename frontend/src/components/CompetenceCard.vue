@@ -125,7 +125,13 @@ const formattedEnd = computed(() => formatDate(itemObj.value.end_date))
 
 const renderedContentHtml = computed(() => {
   const content = itemObj.value.content
-  return content ? md.render(content) : ''
+  if (!content) return ''
+
+  let html = md.render(content)
+
+  html = html.replace(/<img[^>]*>/g, '')
+
+  return html
 })
 
 const radius = 45

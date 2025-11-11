@@ -37,8 +37,7 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted } from 'vue'
+<script setup>import { ref, computed, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import KanbanView from '../../components/KanbanView.vue'
 import ListView from '../../components/ListView.vue'
@@ -105,11 +104,21 @@ async function handleMoveTask({ id, toStatus }) {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   // Always refresh tasks on mount so simple employees see latest data
-  tasksStore.refresh()
+  await tasksStore.refresh()
   userStore.initialize()
+
+  // Log all received tasks
+  console.log('--- Tasks received ---')
+  console.log(tasks.value)
 })
+
+// Watch tasks for live updates
+watch(tasks, (newTasks) => {
+  console.log('--- Tasks updated ---')
+  console.log(newTasks)
+}, { deep: true })
 
 function handleOpenTask(task) {
   selectedTask.value = { ...task }
@@ -123,6 +132,7 @@ async function handleSaveTask(updated) {
     alert('Failed to save: ' + (e?.message || e))
   }
 }
+
 </script>
 
 <style>

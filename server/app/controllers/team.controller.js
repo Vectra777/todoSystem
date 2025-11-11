@@ -43,16 +43,17 @@ exports.create = async (req, res) => {
     }
 };
 
-exports.findAll = (req, res) => {
-    if (!ensureAuthenticated(req, res)) return;
-    Team.findAll()
-        .then(data => {
-            res.send(data);
-        })
-        .catch(err => {
-            res.status(500).send({
-                message:
-                    err.message || "Some error occurred while retrieving teams."
-            });
+exports.findAll = async (req, res) => {
+
+    try {
+
+        const data = await Team.findAll();
+        console.log('Teams fetched:', data.map(t => t.toJSON())); 
+        res.send(data);
+    } catch (err) {
+        console.error('Failed to fetch teams:', err);
+        res.status(500).send({
+            message: err.message || "Some error occurred while retrieving teams."
         });
-}
+    }
+};

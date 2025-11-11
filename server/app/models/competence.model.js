@@ -32,6 +32,14 @@ module.exports = (connex, Sequelize) => {
         label: {
             type: Sequelize.STRING,
             allowNull: true
+        },
+        company: {
+            type: Sequelize.INTEGER,
+            allowNull: true,
+            references: {
+                model: 'companies',
+                key: 'id'
+            },
         }
 
       
