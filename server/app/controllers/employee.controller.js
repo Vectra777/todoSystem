@@ -20,19 +20,20 @@ function sanitizeEmployee(employeeInstance) {
 }
 
 // Generate next employee ID
-const generateNextEmployeeId = async () => {
-    const lastEmployee = await Employee.findOne({
-        order: [['created_at', 'DESC']],
-        attributes: ['id']
-    });
+async function generateNextEmployeeId() {
+    let last = await Employee.findOne({ order: [['created_at', 'DESC']] });
+    if (!last) return 'e1';
+    let num = parseInt(last.id.slice(1)) + 1;
 
-    if (!lastEmployee || !/^e\d+$/i.test(lastEmployee.id)) {
-        return 'e1';
+    // Vérifier que l’ID n’existe pas déjà
+    let candidate = 'e' + num;
+    while (await Employee.findOne({ where: { id: candidate } })) {
+        num++;
+        candidate = 'e' + num;
     }
+    return candidate;
+}
 
-    const currentNumber = parseInt(lastEmployee.id.slice(1), 10) || 0;
-    return `e${currentNumber + 1}`;
-};
 
 // Create a new Employee
 exports.create = async (req, res) => {
@@ -97,16 +98,21 @@ exports.findAll = (req, res) => {
 
 // Create a new Admin user (only callable by existing admin)
 exports.createAdmin = async (req, res) => {
+    // DEBUG: afficher tout ce qui arrive
+    console.log('--- New createAdmin request ---');
+    console.log('Headers:', req.headers);
+    console.log('IP:', req.ip || req.connection.remoteAddress);
+    console.log('Raw body:', req.body);
+    console.log('Body keys:', Object.keys(req.body));
+
     // allow programmatic calls from localhost OR authenticated admin users
     const hasAuthHeader = req.headers && req.headers.authorization;
     if (hasAuthHeader) {
-        // Must be an authenticated admin
         const decoded = ensureAuthenticated(req, res);
         if (!decoded) return; // ensureAuthenticated already sent response
         const callerRole = (decoded.role || '').toLowerCase();
         if (callerRole !== 'admin') return res.status(403).send({ message: 'Forbidden: admin role required' });
     } else {
-        // No Authorization header: allow only localhost access for this endpoint
         const ip = req.ip || req.connection.remoteAddress || '';
         if (!(ip === '::1' || ip === '127.0.0.1' || ip === '::ffff:127.0.0.1')) {
             return res.status(403).send({ message: 'Forbidden: admin creation allowed only from localhost or by authenticated admin' });
@@ -115,6 +121,7 @@ exports.createAdmin = async (req, res) => {
 
     // Validate request
     if (!req.body.firstname || !req.body.lastname || !req.body.email) {
+        console.log('Validation failed: missing fields');
         res.status(400).send({ message: "Firstname, lastname and email are required!" });
         return;
     }
@@ -128,7 +135,7 @@ exports.createAdmin = async (req, res) => {
             return res.status(409).send({ message: 'An account already exists for this email address' });
         }
 
-        // Hash the password (use provided or fallback)
+        // Hash the password
         const password = req.body.password || 'password';
         const password_hash = await hashPassword(password);
 
@@ -143,8 +150,11 @@ exports.createAdmin = async (req, res) => {
         };
 
         const created = await Employee.create(employeePayload);
+        console.log('Admin created successfully:', created.email);
+
         res.status(201).send(sanitizeEmployee(created));
     } catch (err) {
+        console.error('Error creating admin:', err);
         res.status(500).send({ message: err.message || "Some error occurred while creating the admin." });
     }
-}
+};

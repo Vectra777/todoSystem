@@ -16,6 +16,7 @@ const app = express();
 const statusMonitor = require('express-status-monitor');
 const monitorMiddleware = statusMonitor({ title: 'Todo System Monitor' });
 app.use(monitorMiddleware);
+app.use(express.urlencoded({ extended: true }));
 
 function monitorAuth(req, res, next) {
   const token = process.env.MONITOR_TOKEN;
