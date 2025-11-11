@@ -58,10 +58,16 @@ CREATE TABLE user_tasks (
 CREATE TABLE files (
     id INT AUTO_INCREMENT PRIMARY KEY,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    competence_ID INT,
+    competence_id INT,
     extension VARCHAR(10),
     name VARCHAR(255),
-    FOREIGN KEY (competence_ID) REFERENCES competences(id)
+    original_name VARCHAR(255),
+    stored_name VARCHAR(255),
+    mime_type VARCHAR(100),
+    size INT,
+    uploaded_by VARCHAR(10),
+    FOREIGN KEY (competence_id) REFERENCES competences(id),
+    FOREIGN KEY (uploaded_by) REFERENCES employees(id) ON DELETE SET NULL
 );
 
 CREATE TABLE team_tasks (
@@ -112,8 +118,7 @@ INSERT INTO user_tasks (competence_id, employee_id, status, employee_review, hr_
 (3, 'e1', 'In Progress', 'Creating new database queries', NULL),
 (4, 'e4', 'To Do', NULL, NULL);
 
--- Files
-INSERT INTO files (id, competence_ID, extension, name) VALUES
+INSERT INTO files (id, competence_id, extension, name) VALUES
 (1, 1, 'pdf', 'vue_certification.pdf'),
 (2, 2, 'png', 'ux_mockup.png'),
 (3, 2, 'fig', 'design_system.fig'),

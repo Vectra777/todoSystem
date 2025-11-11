@@ -59,10 +59,10 @@ db.teams.hasMany(db.team_members, {
 
 // Files & Competences (One-to-Many)
 db.competences.hasMany(db.files, {
-    foreignKey: 'competence_ID'
+    foreignKey: 'competence_id'
 });
 db.files.belongsTo(db.competences, {
-    foreignKey: 'competence_ID'
+    foreignKey: 'competence_id'
 });
 
 // User Tasks (Many-to-Many between Employees and Competences)

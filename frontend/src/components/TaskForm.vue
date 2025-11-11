@@ -324,41 +324,64 @@
             <label class="form-label">Add files</label>
             <input
               type="file"
+              ref="fileInput"
               class="form-control"
               @change="onFilesSelected"
               multiple
             />
-            <small class="text-muted">You can add multiple files.</small>
+            <small class="text-muted">Max 20 MB per file. Allowed: images, PDF, Office docs, text, zip.</small>
+          </div>
+          <div v-if="uploading" class="alert alert-info">
+            Uploading... {{ uploadProgress }}%
           </div>
         </template>
 
         <div
-          v-if="!localTask.files || localTask.files.length === 0"
+          v-if="(!localTask.files || localTask.files.length === 0) && !loadingFiles"
           class="text-muted text-center py-3"
         >
           No files attached
         </div>
+        <div v-if="loadingFiles" class="text-center py-3">
+          <div class="spinner-border spinner-border-sm" role="status"></div>
+          <span class="ms-2">Loading files...</span>
+        </div>
         <ul
-          v-else
+          v-else-if="localTask.files && localTask.files.length > 0"
           class="list-group"
           style="max-height: 200px; overflow-y: auto"
         >
           <li
-            v-for="(file, index) in localTask.files"
-            :key="file.id || file.name || index"
-            class="list-group-item d-flex align-items-center"
+            v-for="file in localTask.files"
+            :key="file.id"
+            class="list-group-item d-flex align-items-center justify-content-between"
           >
-            <i :class="fileIcon(file.type) + ' fs-4 me-2'"></i>
-            <span class="me-2">{{ file.name }}</span>
-            <button
-              v-if="currentMode === 'edit' && mainView"
-              type="button"
-              class="btn btn-sm btn-outline-danger ms-auto"
-              @click="removeFile(file)"
-              aria-label="Remove file"
-            >
-              <i class="bi bi-trash"></i>
-            </button>
+            <div class="d-flex align-items-center">
+              <i :class="fileIconByMime(file.mime_type) + ' fs-4 me-2'"></i>
+              <div>
+                <div>{{ file.original_name || file.name }}</div>
+                <small class="text-muted">{{ formatFileSize(file.size) }}</small>
+              </div>
+            </div>
+            <div>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-primary me-1"
+                @click="downloadFile(file)"
+                title="Download"
+              >
+                <i class="bi bi-download"></i>
+              </button>
+              <button
+                v-if="currentMode === 'edit' && mainView"
+                type="button"
+                class="btn btn-sm btn-outline-danger"
+                @click="deleteFile(file)"
+                title="Delete"
+              >
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
           </li>
         </ul>
       </div>
@@ -424,10 +447,16 @@ export default {
       availableEmployees: [],
       loadingTeams: false,
       loadingEmployees: false,
+      loadingFiles: false,
+      uploading: false,
+      uploadProgress: 0,
     };
   },
   async mounted() {
     await this.loadTeamsAndEmployees();
+    if (this.task.id) {
+      await this.loadFiles();
+    }
   },
   computed: {
     isFormValid() {
@@ -614,20 +643,110 @@ export default {
           return "bi bi-file-earmark";
       }
     },
-    onFilesSelected(event) {
+    fileIconByMime(mime) {
+      if (!mime) return "bi bi-file-earmark";
+      if (mime.startsWith('image/')) return "bi bi-file-image text-warning";
+      if (mime === 'application/pdf') return "bi bi-file-pdf text-danger";
+      if (mime.includes('word')) return "bi bi-file-word text-primary";
+      if (mime.includes('excel') || mime.includes('spreadsheet')) return "bi bi-file-earmark-excel text-success";
+      if (mime.includes('powerpoint') || mime.includes('presentation')) return "bi bi-filetype-ppt text-danger";
+      if (mime.startsWith('text/')) return "bi bi-file-text";
+      if (mime.includes('zip')) return "bi bi-file-zip";
+      return "bi bi-file-earmark";
+    },
+    formatFileSize(bytes) {
+      if (!bytes) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+    },
+    async loadFiles() {
+      if (!this.task.id) return;
+      const apiStore = useApiStore();
+      try {
+        this.loadingFiles = true;
+        const files = await apiStore.getFilesByCompetence(this.task.id);
+        this.localTask.files = files;
+      } catch (error) {
+        console.error('Failed to load files:', error);
+        this.localTask.files = [];
+      } finally {
+        this.loadingFiles = false;
+      }
+    },
+    async onFilesSelected(event) {
       const selected = Array.from(event.target.files || []);
-      if (!this.localTask.files) this.localTask.files = [];
-      selected.forEach((f) => {
-        const ext = (f.name.split(".").pop() || "").toLowerCase();
-        this.localTask.files.push({ name: f.name, type: ext });
-      });
-      event.target.value = null;
+      if (selected.length === 0 || !this.task.id) return;
+
+      const apiStore = useApiStore();
+      this.uploading = true;
+      this.uploadProgress = 0;
+
+      try {
+        for (let i = 0; i < selected.length; i++) {
+          const file = selected[i];
+          this.uploadProgress = Math.round(((i + 1) / selected.length) * 100);
+          
+          const uploaded = await apiStore.uploadFile(this.task.id, file);
+          
+          // Add to local list
+          if (!this.localTask.files) this.localTask.files = [];
+          this.localTask.files.push(uploaded);
+        }
+        
+        // Clear file input
+        if (this.$refs.fileInput) {
+          this.$refs.fileInput.value = null;
+        }
+      } catch (error) {
+        console.error('Upload failed:', error);
+        alert('Upload failed: ' + (error.message || 'Unknown error'));
+      } finally {
+        this.uploading = false;
+        this.uploadProgress = 0;
+      }
+    },
+    async downloadFile(file) {
+      if (!file.id) return;
+      const apiStore = useApiStore();
+      try {
+        const blob = await apiStore.downloadFile(file.id);
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.original_name || file.name || 'download';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } catch (error) {
+        console.error('Download failed:', error);
+        alert('Download failed: ' + (error.message || 'Unknown error'));
+      }
+    },
+    async deleteFile(file) {
+      if (!file.id) return;
+      
+      const confirm = window.confirm(`Delete "${file.original_name || file.name}"?`);
+      if (!confirm) return;
+
+      const apiStore = useApiStore();
+      try {
+        await apiStore.deleteFile(file.id);
+        // Remove from local list
+        if (this.localTask.files) {
+          this.localTask.files = this.localTask.files.filter(f => f.id !== file.id);
+        }
+      } catch (error) {
+        console.error('Delete failed:', error);
+        alert('Delete failed: ' + (error.message || 'Unknown error'));
+      }
     },
     removeFile(file) {
-      if (!this.localTask.files) return;
-      this.localTask.files = this.localTask.files.filter(
-        (f) => f.name !== file.name
-      );
+      // Legacy method - now handled by deleteFile
+      this.deleteFile(file);
     },
   },
   watch: {

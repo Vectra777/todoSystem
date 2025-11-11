@@ -358,7 +358,61 @@ export const useApiStore = defineStore('api', {
 
     // Search
     async search(query) {
-      return this.request(`/search?q=${encodeURIComponent(query)}`)
+      return this.request(`/search/fuzzy?q=${encodeURIComponent(query)}`)
+    },
+
+    // Files
+    async getFilesByCompetence(competenceId) {
+      return this.request(`/file?competenceId=${competenceId}`)
+    },
+
+    async uploadFile(competenceId, file) {
+      const userStore = useUserStore()
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('competence_id', competenceId)
+
+      const url = `${API_BASE_URL}/file`
+      const headers = {}
+      if (userStore.token) {
+        headers['Authorization'] = `Bearer ${userStore.token}`
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: formData // Don't set Content-Type, browser will set multipart boundary
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || `Upload failed: ${response.statusText}`)
+      }
+
+      return await response.json()
+    },
+
+    async downloadFile(fileId) {
+      const userStore = useUserStore()
+      const url = `${API_BASE_URL}/file/${fileId}/download`
+      const headers = {}
+      if (userStore.token) {
+        headers['Authorization'] = `Bearer ${userStore.token}`
+      }
+
+      const response = await fetch(url, { headers })
+      if (!response.ok) {
+        throw new Error('Download failed')
+      }
+
+      // Return blob for download
+      return response.blob()
+    },
+
+    async deleteFile(fileId) {
+      return this.request(`/file/${fileId}`, {
+        method: 'DELETE'
+      })
     }
   }
 })
