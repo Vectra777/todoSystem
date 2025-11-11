@@ -125,7 +125,8 @@ exports.login = async (req, res) => {
 		const payload = {
 			id: user.id,
 			email: user.email,
-			role: user.role
+			role: user.role,
+			company_id: user.company_id
 		};
 
 		const accessToken = generateAccessToken(payload);
