@@ -1,20 +1,15 @@
 <template>
   <div class="row g-3 g-lg-4">
-    <div
-      class="col-12 col-md-6 col-lg-3 kanban-column"
-      v-for="status in statuses"
-      :key="status"
-      :class="{ 'drop-over': overStatus === status }"
-      @dragover.prevent
-      @dragenter.prevent="onDragEnter(status)"
-      @dragleave="onDragLeave(status)"
-      @drop="onDrop(status, $event)"
-    >
+    <div class="col-12 col-md-6 col-lg-3 kanban-column" v-for="status in statuses" :key="status"
+      :class="{ 'drop-over': overStatus === status }" @dragover.prevent="status !== 'validated'"
+      @dragenter.prevent="status !== 'validated' && onDragEnter(status)"
+      @dragleave="status !== 'validated' && onDragLeave(status)"
+      @drop="status !== 'validated' && onDrop(status, $event)">
       <h4 class="text-center text-capitalize mb-3">{{ status + ' (' + counter[status] + ')' }}</h4>
       <div v-for="task in tasksByStatus(status)" :key="task.id">
         <CompetenceCard :item="task" @open="$emit('open-task', task)" />
       </div>
-    </div >
+    </div>
   </div>
 </template>
 
@@ -61,6 +56,7 @@ function onDrop(targetStatus, e) {
   padding-top: .5rem;
   transition: background-color 0.15s ease-in-out, outline-color 0.15s;
 }
+
 .drop-over {
   outline: 2px dashed var(--bs-primary);
   outline-offset: -6px;
@@ -69,17 +65,26 @@ function onDrop(targetStatus, e) {
 
 /* Adjust card density only at breakpoint boundaries (no continuous resizing) */
 @media (max-width: 575.98px) {
+
   /* xs: single column – keep cards roomy */
-  .kanban-column .competence-card { padding: 1.25rem !important; }
+  .kanban-column .competence-card {
+    padding: 1.25rem !important;
+  }
 }
 
 @media (min-width: 768px) and (max-width: 991.98px) {
+
   /* md: two columns – slightly tighter cards */
-  .kanban-column .competence-card { padding: 1rem !important; }
+  .kanban-column .competence-card {
+    padding: 1rem !important;
+  }
 }
 
 @media (min-width: 1200px) {
+
   /* xl+: four columns plenty of space – restore padding */
-  .kanban-column .competence-card { padding: 1.25rem !important; }
+  .kanban-column .competence-card {
+    padding: 1.25rem !important;
+  }
 }
 </style>
