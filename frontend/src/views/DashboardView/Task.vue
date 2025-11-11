@@ -29,7 +29,7 @@
     <TaskForm
       v-if="selectedTask"
       :task="selectedTask"
-      :lookAsHR="true"
+      :lookAsHR="false"
       :mainView="false"
       @close="selectedTask = null"
       @save="handleSaveTask"

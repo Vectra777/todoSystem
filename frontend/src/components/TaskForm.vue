@@ -81,7 +81,7 @@
         </div>
 
         <!-- Status -->
-        <div class="mb-3">
+        <div class="mb-3" v-if="!mainView">
           <label class="form-label">Status</label>
           <template v-if="currentMode === 'edit' && !mainView">
             <select v-model="localTask.status" class="form-select" required>
@@ -99,7 +99,7 @@
       </div>
     </div>
     <!-- Add member or team -->
-    <div class="card mb-4">
+    <div class="card mb-4" v-if="mainView">
       <div class="card-header fw-semibold">Members</div>
       <div class="card-body">
         <div class="mb-3">
