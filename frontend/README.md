@@ -29,7 +29,7 @@ npm run build
 
 ## Register an admin on website
 ```bash
-curl -X POST http://localhost:8080/api/auth/register \
+curl -X POST http://localhost:8080/api/employee/register \
   -H "Content-Type: application/json" \
   -d '{"firstname":"Admin","lastname":"User","email":"admin@test.com","password":"admin123","role":"admin"}'
 ```

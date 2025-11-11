@@ -1,6 +1,8 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const path = require('path');
+const fs = require('fs');
 
 // Load environment variables
 require('dotenv').config();
@@ -45,7 +47,38 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 const db = require('./app/models');
-db.connex.sync();
+const sqlFilePath = path.join(__dirname, 'app', 'data', 'default.sql');
+
+// Drop and recreate all tables
+db.connex
+  .sync({ force: true }) // Deletes all existing tables!
+  .then(async () => {
+    console.log('✅ Database synchronized (existing tables dropped)');
+
+    // Load and execute SQL file if it exists
+    if (fs.existsSync(sqlFilePath)) {
+      const sql = fs.readFileSync(sqlFilePath, 'utf8');
+      const queries = sql
+        .split(';')
+        .map(q => q.trim())
+        .filter(q => q.length > 0);
+
+      for (const query of queries) {
+        try {
+          await db.connex.query(query);
+        } catch (err) {
+          console.error('❌ Error executing query:', query, err.message);
+        }
+      }
+
+      console.log('📦 Default SQL file loaded successfully.');
+    } else {
+      console.warn('⚠️ Default SQL file not found:', sqlFilePath);
+    }
+  })
+  .catch(err => {
+    console.error('❌ Error synchronizing database:', err);
+  });
 
 app.get('/', (req, res) => {
   res.send('Hello World!');

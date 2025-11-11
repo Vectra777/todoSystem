@@ -2,8 +2,8 @@
 
 module.exports ={
     HOST: 'localhost',
-    USER: 'admin',
-    PASSWORD: 'Fanfan0505',
+    USER: 'root',
+    PASSWORD: 'root',
     DB: 'db_todo',
     dialect: 'mysql'
 }

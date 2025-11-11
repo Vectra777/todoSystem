@@ -1,7 +1,7 @@
 -- Insert test data
 -- Employees
 INSERT INTO employees (id, firstname, lastname, email, password_hash, role, is_active) VALUES
-('e1', 'John', 'Smith', 'john.smith@company.com', 'hash123', 'admin', true),
+('e1', 'Johnny', 'Smith', 'john.smith@company.com', 'hash123', 'admin', true),
 ('e2', 'Emily', 'Johnson', 'emily.johnson@company.com', 'hash124', 'employee', true),
 ('e3', 'Michael', 'Brown', 'michael.brown@company.com', 'hash125', 'employee', true),
 ('e4', 'Sarah', 'Wilson', 'sarah.wilson@company.com', 'hash126', 'employee', true);
@@ -34,6 +34,7 @@ INSERT INTO user_tasks (competence_id, employee_id, status, employee_review, hr_
 (3, 'e1', 'In Progress', 'Creating new database queries', NULL),
 (4, 'e4', 'To Do', NULL, NULL);
 
+-- Files
 INSERT INTO files (id, competence_id, extension, name) VALUES
 (1, 1, 'pdf', 'vue_certification.pdf'),
 (2, 2, 'png', 'ux_mockup.png'),
@@ -41,8 +42,8 @@ INSERT INTO files (id, competence_id, extension, name) VALUES
 (4, 3, 'sql', 'database_schema.sql');
 
 -- Team Tasks
-INSERT INTO team_tasks (id, team_id, competence_id, start_date, end_date) VALUES
-(1, 't1', 1, '2025-01-01', '2025-06-30'),
-(2, 't1', 3, '2025-02-01', '2025-08-31'),
-(3, 't2', 2, '2025-01-15', '2025-04-30'),
-(4, 't3', 4, '2025-03-01', '2025-09-30');
+INSERT INTO team_tasks (team_id, competence_id, created_at) VALUES
+('t1', 1, '2025-01-01'),
+('t1', 3, '2025-02-01'),
+('t2', 2, '2025-01-15'),
+('t3', 4, '2025-03-01');
