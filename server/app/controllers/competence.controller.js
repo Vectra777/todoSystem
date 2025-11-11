@@ -9,9 +9,15 @@ const TeamMember = db.team_members;
 const File = db.files;
 const { Op } = require('sequelize');
 
+// --- READ/SEARCH FUNCTIONS ---
+
 // Get all competences for a specific employee
 exports.findByEmployee = async (req, res) => {
-  if (!ensureAuthenticated(req, res)) return;
+  const decodedUser = ensureAuthenticated(req, res);
+  if (!decodedUser) return;
+  // Retrieve the company ID from the authenticated user
+  const callerCompanyId = decodedUser.company_id; 
+
   const employeeId = req.params.employeeId;
 
   try {
@@ -23,6 +29,8 @@ exports.findByEmployee = async (req, res) => {
 
     // Fetch competences including the employee through data
     const competences = await Competence.findAll({
+      // FILTER BY company_id
+      where: { company_id: callerCompanyId }, 
       include: [{
         model: Employee,
         required: true,
@@ -35,7 +43,6 @@ exports.findByEmployee = async (req, res) => {
       }]
     });
 
-    // Only keep competences that have the employee joined 
     const result = competences
       .filter(c => c.employees && c.employees.length > 0)
       .map(c => {
@@ -65,7 +72,11 @@ exports.findByEmployee = async (req, res) => {
 
 // Get all competences for a team with progress percentage
 exports.findByTeam = async (req, res) => {
-  if (!ensureAuthenticated(req, res)) return;
+    const decodedUser = ensureAuthenticated(req, res);
+    if (!decodedUser) return;
+    // Retrieve the company ID from the authenticated user
+    const callerCompanyId = decodedUser.company_id;
+    
     const teamId = req.params.teamId;
 
     try {
@@ -85,6 +96,8 @@ exports.findByTeam = async (req, res) => {
 
         // Get all team competences with employee statuses
         const competences = await Competence.findAll({
+            // FILTER BY company_id
+            where: { company_id: callerCompanyId },
             include: [
                 {
                     model: Team,
@@ -106,7 +119,6 @@ exports.findByTeam = async (req, res) => {
             ]
         });
 
-        // Calculate progress percentage for each competence
         const result = competences.map(competence => {
             const totalMembers = employeeIds.length;
             const statuses = competence.employees.map(emp => emp.user_tasks.status);
@@ -145,390 +157,411 @@ exports.findByTeam = async (req, res) => {
 };
 
 exports.findAll = async (req, res) => {
-  if (!ensureAuthenticated(req, res)) return;
-  try {
-    const competences = await Competence.findAll({
-      include: [
-        {
-          model: Employee,
-          through: {
-            model: UserTask,
-            attributes: ['status', 'employee_review', 'hr_review']
-          },
-          attributes: ['id', 'firstname', 'lastname']
-        },
-        {
-          model: Team,
-          through: {
-            model: TeamTask,
-          },
-          attributes: ['id', 'team_name', 'description']
-        }
-      ]
-    });
+    const decodedUser = ensureAuthenticated(req, res);
+    if (!decodedUser) return;
+    // Retrieve the company ID from the authenticated user
+    const callerCompanyId = decodedUser.company_id;
+    
+    try {
+        const competences = await Competence.findAll({
+            // FILTER BY company_id
+            where: { company_id: callerCompanyId },
+            include: [
+                {
+                    model: Employee,
+                    through: {
+                        model: UserTask,
+                        attributes: ['status', 'employee_review', 'hr_review']
+                    },
+                    attributes: ['id', 'firstname', 'lastname']
+                },
+                {
+                    model: Team,
+                    through: {
+                        model: TeamTask,
+                    },
+                    attributes: ['id', 'team_name', 'description']
+                }
+            ]
+        });
 
-    // Normalize response: for each competence return members and teams arrays
-    const result = competences.map(c => {
-      const members = (c.employees || []).map(emp => {
-        // through data should be available as emp.user_tasks (singular) depending on association
-        const throughData = emp.user_tasks || emp.user_taskses || null;
-        return {
-          id: emp.id,
-          firstname: emp.firstname,
-          lastname: emp.lastname,
-          status: throughData?.status || null,
-          employee_review: throughData?.employee_review || null,
-          hr_review: throughData?.hr_review || null
-        };
-      });
+        const result = competences.map(c => {
+            const members = (c.employees || []).map(emp => {
+                const throughData = emp.user_tasks || emp.user_taskses || null;
+                return {
+                    id: emp.id,
+                    firstname: emp.firstname,
+                    lastname: emp.lastname,
+                    status: throughData?.status || null,
+                    employee_review: throughData?.employee_review || null,
+                    hr_review: throughData?.hr_review || null
+                };
+            });
 
-      const teams = (c.teams || []).map(team => {
-        // through data for team association
-        const teamThrough = team.team_tasks && team.team_tasks[0] ? team.team_tasks[0] : team.team_task || null;
-        return {
-          id: team.id,
-          team_name: team.team_name,
-          description: team.description,
-          assigned_at: teamThrough?.created_at || null,
-          start_date: teamThrough?.start_date || null,
-          end_date: teamThrough?.end_date || null
-        };
-      });
+            const teams = (c.teams || []).map(team => {
+                const teamThrough = team.team_tasks && team.team_tasks[0] ? team.team_tasks[0] : team.team_task || null;
+                return {
+                    id: team.id,
+                    team_name: team.team_name,
+                    description: team.description,
+                    assigned_at: teamThrough?.created_at || null,
+                    start_date: teamThrough?.start_date || null,
+                    end_date: teamThrough?.end_date || null
+                };
+            });
 
-      // Calculate progress: To Do = 0, In Progress = 0.5, Completed = 1
-      const statusValues = {
-        'To Do': 0,
-        'In Progress': 0.5,
-        'Completed': 1,
-        'Validated': 1
-      };
+            const statusValues = {
+                'To Do': 0,
+                'In Progress': 0.5,
+                'Completed': 1,
+                'Validated': 1
+            };
 
-      let totalProgress = 0;
-      members.forEach(member => {
-        const progressValue = statusValues[member.status] || 0;
-        totalProgress += progressValue;
-      });
+            let totalProgress = 0;
+            members.forEach(member => {
+                const progressValue = statusValues[member.status] || 0;
+                totalProgress += progressValue;
+            });
 
-      const progress = members.length > 0 ? Math.round((totalProgress / members.length) * 100) : 0;
+            const progress = members.length > 0 ? Math.round((totalProgress / members.length) * 100) : 0;
 
-      return {
-        id: c.id,
-        title: c.title,
-        description: c.description,
-        start_date: c.start_date,
-        end_date: c.end_date,
-        label: c.label,
-        progress: progress,
-        members,
-        teams
-      };
-    });
+            return {
+                id: c.id,
+                title: c.title,
+                description: c.description,
+                start_date: c.start_date,
+                end_date: c.end_date,
+                label: c.label,
+                progress: progress,
+                members,
+                teams
+            };
+        });
 
-    res.send(result);
-  } catch (err) {
-    res.status(500).send({
-      message: err.message || "Some error occurred while retrieving competences.",
-    });
-  }
+        res.send(result);
+    } catch (err) {
+        res.status(500).send({
+            message: err.message || "Some error occurred while retrieving competences.",
+        });
+    }
 };
 
 // Get progress percentage for a specific competence
 exports.getProgress = async (req, res) => {
-  if (!ensureAuthenticated(req, res)) return;
-  
-  try {
-    const id = req.params.id;
-
-    // Get the competence with all assigned employees
-    const competence = await Competence.findByPk(id, {
-      include: [{
-        model: Employee,
-        through: {
-          model: UserTask,
-          attributes: ['status']
-        },
-        attributes: ['id', 'firstname', 'lastname']
-      }]
-    });
-
-    if (!competence) {
-      return res.status(404).send({
-        message: `Competence with id ${id} not found.`
-      });
-    }
-
-    // Get all member statuses
-    const members = competence.employees || [];
+    const decodedUser = ensureAuthenticated(req, res);
+    if (!decodedUser) return;
+    // Retrieve the company ID from the authenticated user
+    const callerCompanyId = decodedUser.company_id;
     
-    if (members.length === 0) {
-      return res.send({
-        competence_id: id,
-        progress: 0,
-        total_members: 0,
-        members: []
-      });
+    try {
+        const id = req.params.id;
+
+        // Get the competence with all assigned employees
+        const competence = await Competence.findByPk(id, {
+            // ADD company_id filter for security and isolation
+            where: { company_id: callerCompanyId }, 
+            include: [{
+                model: Employee,
+                through: {
+                    model: UserTask,
+                    attributes: ['status']
+                },
+                attributes: ['id', 'firstname', 'lastname']
+            }]
+        });
+
+        if (!competence) {
+            // Not found OR belongs to a different company
+            return res.status(404).send({ 
+                message: `Competence with id ${id} not found or unauthorized.`
+            });
+        }
+
+        const members = competence.employees || [];
+        
+        if (members.length === 0) {
+            return res.send({
+                competence_id: id,
+                progress: 0,
+                total_members: 0,
+                members: []
+            });
+        }
+
+        const statusValues = {
+            'To Do': 0,
+            'In Progress': 0.5,
+            'Completed': 1,
+            'Validated': 1
+        };
+
+        let totalProgress = 0;
+        const memberProgress = members.map(emp => {
+            const throughData = emp.user_tasks || emp.user_taskses || null;
+            const status = throughData?.status || 'To Do';
+            const progressValue = statusValues[status] || 0;
+            totalProgress += progressValue;
+            
+            return {
+                id: emp.id,
+                name: `${emp.firstname} ${emp.lastname}`,
+                status: status,
+                progress: progressValue
+            };
+        });
+
+        const percentage = (totalProgress / members.length) * 100;
+
+        res.send({
+            competence_id: id,
+            progress: Math.round(percentage * 10) / 10,
+            total_members: members.length,
+            completed_count: memberProgress.filter(m => m.progress === 1).length,
+            in_progress_count: memberProgress.filter(m => m.progress === 0.5).length,
+            todo_count: memberProgress.filter(m => m.progress === 0).length,
+            members: memberProgress
+        });
+
+    } catch (err) {
+        res.status(500).send({
+            message: err.message || "Error calculating competence progress."
+        });
     }
-
-    // Calculate progress: To Do = 0, In Progress = 0.5, Completed = 1
-    const statusValues = {
-      'To Do': 0,
-      'In Progress': 0.5,
-      'Completed': 1,
-      'Validated': 1
-    };
-
-    let totalProgress = 0;
-    const memberProgress = members.map(emp => {
-      const throughData = emp.user_tasks || emp.user_taskses || null;
-      const status = throughData?.status || 'To Do';
-      const progressValue = statusValues[status] || 0;
-      totalProgress += progressValue;
-      
-      return {
-        id: emp.id,
-        name: `${emp.firstname} ${emp.lastname}`,
-        status: status,
-        progress: progressValue
-      };
-    });
-
-    // Calculate percentage (0-100)
-    const percentage = (totalProgress / members.length) * 100;
-
-    res.send({
-      competence_id: id,
-      progress: Math.round(percentage * 10) / 10, // Round to 1 decimal place
-      total_members: members.length,
-      completed_count: memberProgress.filter(m => m.progress === 1).length,
-      in_progress_count: memberProgress.filter(m => m.progress === 0.5).length,
-      todo_count: memberProgress.filter(m => m.progress === 0).length,
-      members: memberProgress
-    });
-
-  } catch (err) {
-    res.status(500).send({
-      message: err.message || "Error calculating competence progress."
-    });
-  }
 };
 
+// --- WRITE/MODIFY FUNCTIONS ---
+
 exports.create = async (req, res) => {
-  if (!ensureAuthenticated(req, res)) return;
-  try {
-    // Validate request
-    if (!req.body.title) {
-      res.status(400).send({
-        message: "Title is required!",
-      });
-      return;
-    }
-
-    // Create a Competence
-    const competence = await Competence.create({
-      title: req.body.title,
-      description: req.body.description || "",
-      start_date: req.body.start_date || null,
-      end_date: req.body.end_date || null,
-      label: req.body.label || "",
-    });
-
-    // Process members if any
-    if (req.body.members && Array.isArray(req.body.members)) {
-      const memberPromises = req.body.members.map(async (member) => {
-        if (member.id.startsWith('e')) {
-          // It's an individual employee
-          await UserTask.create({
-            competence_id: competence.id,
-            employee_id: member.id,
-            status: 'To Do'
-          });
-        } else if (member.id.startsWith('t')) {
-          // It's a team - only create the TeamTask relationship
-          await TeamTask.create({
-            team_id: member.id,
-            competence_id: competence.id
-          });
-          // Note: We don't automatically create UserTasks for all team members
-          // UserTasks are only for individually assigned employees
+    const decodedUser = ensureAuthenticated(req, res);
+    if (!decodedUser) return;
+    // Retrieve the company ID from the authenticated user
+    const callerCompanyId = decodedUser.company_id;
+    
+    try {
+        if (!req.body.title) {
+            res.status(400).send({
+                message: "Title is required!",
+            });
+            return;
         }
-      });
 
-      await Promise.all(memberPromises);
+        // Create a Competence (ASSIGNING company_id)
+        const competence = await Competence.create({
+            title: req.body.title,
+            description: req.body.description || "",
+            start_date: req.body.start_date || null,
+            end_date: req.body.end_date || null,
+            label: req.body.label || "",
+            company_id: callerCompanyId // ASSIGN COMPANY ID
+        });
+
+        // Process members 
+        if (req.body.members && Array.isArray(req.body.members)) {
+            const memberPromises = req.body.members.map(async (member) => {
+                if (member.id.startsWith('e')) {
+                    await UserTask.create({
+                        competence_id: competence.id,
+                        employee_id: member.id,
+                        status: 'To Do'
+                    });
+                } else if (member.id.startsWith('t')) {
+                    await TeamTask.create({
+                        team_id: member.id,
+                        competence_id: competence.id
+                    });
+                }
+            });
+
+            await Promise.all(memberPromises);
+        }
+
+        // Fetch the created competence with its members
+        const result = await Competence.findByPk(competence.id, {
+            include: [{
+                model: Employee,
+                through: {
+                    model: UserTask,
+                    attributes: ['status']
+                },
+                attributes: ['id', 'firstname', 'lastname']
+            }]
+        });
+
+        res.send(result);
+    } catch (err) {
+        res.status(500).send({
+            message: err.message || "Some error occurred while creating the Competence.",
+        });
     }
-
-    // Fetch the created competence with its members
-    const result = await Competence.findByPk(competence.id, {
-      include: [{
-        model: Employee,
-        through: {
-          model: UserTask,
-          attributes: ['status']
-        },
-        attributes: ['id', 'firstname', 'lastname']
-      }]
-    });
-
-    res.send(result);
-  } catch (err) {
-    res.status(500).send({
-      message: err.message || "Some error occurred while creating the Competence.",
-    });
-  }
 };
 
 // Update a Competence
 exports.update = async (req, res) => {
-  if (!ensureAuthenticated(req, res)) return;
-  try {
-    const id = req.params.id;
+    const decodedUser = ensureAuthenticated(req, res);
+    if (!decodedUser) return;
+    // Retrieve the company ID from the authenticated user
+    const callerCompanyId = decodedUser.company_id;
+    
+    try {
+        const id = req.params.id;
 
-    // Update basic competence info
-    await Competence.update({
-      title: req.body.title,
-      description: req.body.description,
-      start_date: req.body.start_date,
-      end_date: req.body.end_date,
-      label: req.body.label
-    }, {
-      where: { id: id }
-    });
-
-    // Get current user tasks
-    const currentTasks = await UserTask.findAll({
-      where: { competence_id: id }
-    });
-
-    // Create sets for efficient lookup
-    const currentEmployeeIds = new Set(currentTasks.map(task => task.employee_id.toString()));
-    const newEmployeeIds = new Set();
-
-    // Process new members
-    if (req.body.members && Array.isArray(req.body.members)) {
-      for (const member of req.body.members) {
-        if (member.id.startsWith('e')) {
-          // Individual employee
-          const employeeId = member.id;
-          newEmployeeIds.add(employeeId);
-          
-          if (!currentEmployeeIds.has(employeeId)) {
-            // Add new member
-            await UserTask.create({
-              competence_id: id,
-              employee_id: employeeId,
-              status: 'To Do'
+        // AUTH CHECK: Verify ownership before updating
+        const existingCompetence = await Competence.findByPk(id);
+        if (!existingCompetence || existingCompetence.company_id !== callerCompanyId) {
+             return res.status(404).send({ 
+                message: `Competence with id ${id} not found or unauthorized to update.`
             });
-          }
-        } else if (member.id.startsWith('t')) {
-          const teamId = member.id;
-          
-          // Create or update team_task entry
-          await TeamTask.findOrCreate({
-            where: {
-              team_id: teamId,
-              competence_id: id
-            }
-          });
-          // Note: We don't automatically create UserTasks for all team members
-          // UserTasks are only for individually assigned employees
         }
-      }
-    }
-
-    // Get current team tasks
-    const currentTeamTasks = await TeamTask.findAll({
-      where: { competence_id: id }
-    });
-
-    // Remove team tasks that are no longer in the list
-    for (const teamTask of currentTeamTasks) {
-      const teamStillAssigned = req.body.members?.some(
-        member => member.id === teamTask.team_id
-      );
-      
-      if (!teamStillAssigned) {
-        await TeamTask.destroy({
-          where: {
-            competence_id: id,
-            team_id: teamTask.team_id
-          }
+        
+        // Update basic competence info
+        await Competence.update({
+            title: req.body.title,
+            description: req.body.description,
+            start_date: req.body.start_date,
+            end_date: req.body.end_date,
+            label: req.body.label
+        }, {
+            where: { id: id, company_id: callerCompanyId } // Double check company_id in WHERE clause
         });
-      }
-    }
 
-    // Remove members that are no longer in the list
-    for (const currentEmployeeId of currentEmployeeIds) {
-      if (!newEmployeeIds.has(currentEmployeeId)) {
-        await UserTask.destroy({
-          where: {
-            competence_id: id,
-            employee_id: currentEmployeeId
-          }
+        
+        // Get current user tasks
+        const currentTasks = await UserTask.findAll({
+            where: { competence_id: id }
         });
-      }
+
+        // Create sets for efficient lookup
+        const currentEmployeeIds = new Set(currentTasks.map(task => task.employee_id.toString()));
+        const newEmployeeIds = new Set();
+
+        // Process new members
+        if (req.body.members && Array.isArray(req.body.members)) {
+            for (const member of req.body.members) {
+                if (member.id.startsWith('e')) {
+                    const employeeId = member.id;
+                    newEmployeeIds.add(employeeId);
+                    
+                    if (!currentEmployeeIds.has(employeeId)) {
+                        await UserTask.create({
+                            competence_id: id,
+                            employee_id: employeeId,
+                            status: 'To Do'
+                        });
+                    }
+                } else if (member.id.startsWith('t')) {
+                    const teamId = member.id;
+                    
+                    await TeamTask.findOrCreate({
+                        where: {
+                            team_id: teamId,
+                            competence_id: id
+                        }
+                    });
+                }
+            }
+        }
+
+        // Get current team tasks
+        const currentTeamTasks = await TeamTask.findAll({
+            where: { competence_id: id }
+        });
+
+        // Remove team tasks that are no longer in the list
+        for (const teamTask of currentTeamTasks) {
+            const teamStillAssigned = req.body.members?.some(
+                member => member.id === teamTask.team_id
+            );
+            
+            if (!teamStillAssigned) {
+                await TeamTask.destroy({
+                    where: {
+                        competence_id: id,
+                        team_id: teamTask.team_id
+                    }
+                });
+            }
+        }
+
+        // Remove members that are no longer in the list
+        for (const currentEmployeeId of currentEmployeeIds) {
+            if (!newEmployeeIds.has(currentEmployeeId)) {
+                await UserTask.destroy({
+                    where: {
+                        competence_id: id,
+                        employee_id: currentEmployeeId
+                    }
+                });
+            }
+        }
+
+        // Fetch and return updated competence with members
+        const result = await Competence.findByPk(id, {
+            include: [{
+                model: Employee,
+                through: {
+                    model: UserTask,
+                    attributes: ['status']
+                },
+                attributes: ['id', 'firstname', 'lastname']
+            }]
+        });
+
+        if (!result) {
+            return res.status(404).send({
+                message: `Competence with id ${id} not found.`
+            });
+        }
+
+        res.send(result);
+    } catch (err) {
+        res.status(500).send({
+            message: err.message || "Error updating Competence."
+        });
     }
-
-    // Fetch and return updated competence with members
-    const result = await Competence.findByPk(id, {
-      include: [{
-        model: Employee,
-        through: {
-          model: UserTask,
-          attributes: ['status']
-        },
-        attributes: ['id', 'firstname', 'lastname']
-      }]
-    });
-
-    if (!result) {
-      return res.status(404).send({
-        message: `Competence with id ${id} not found.`
-      });
-    }
-
-    res.send(result);
-  } catch (err) {
-    res.status(500).send({
-      message: err.message || "Error updating Competence."
-    });
-  }
 };
 
 // Delete a Competence
 exports.delete = async (req, res) => {
-  if (!ensureAuthenticated(req, res)) return;
-  try {
-    const id = req.params.id;
+    const decodedUser = ensureAuthenticated(req, res);
+    if (!decodedUser) return;
+    // Retrieve the company ID from the authenticated user
+    const callerCompanyId = decodedUser.company_id;
+    
+    try {
+        const id = req.params.id;
 
-    // First delete related files
-    await File.destroy({
-      where: { competence_id: id }
-    });
+        // AUTH CHECK: Verify existence and ownership
+        const competenceToDelete = await Competence.findByPk(id);
+        if (!competenceToDelete || competenceToDelete.company_id !== callerCompanyId) {
+             return res.status(404).send({ 
+                message: `Competence with id ${id} not found or unauthorized to delete.`
+            });
+        }
 
-    // Delete related user tasks
-    await UserTask.destroy({
-      where: { competence_id: id }
-    });
+        // First delete related files
+        await File.destroy({ where: { competence_id: id } });
 
-    // Delete related team tasks
-    await TeamTask.destroy({
-      where: { competence_id: id }
-    });
+        // Delete related user tasks
+        await UserTask.destroy({ where: { competence_id: id } });
 
-    // Then delete the competence
-    const deleted = await Competence.destroy({
-      where: { id: id }
-    });
+        // Delete related team tasks
+        await TeamTask.destroy({ where: { competence_id: id } });
 
-    if (deleted === 0) {
-      return res.status(404).send({
-        message: `Competence with id ${id} not found.`
-      });
+        // Then delete the competence, ensuring it belongs to the company
+        const deleted = await Competence.destroy({
+            where: { id: id, company_id: callerCompanyId }
+        });
+
+        if (deleted === 0) {
+            return res.status(404).send({
+                message: `Competence with id ${id} not found.`
+            });
+        }
+
+        res.status(204).send();
+    } catch (err) {
+        res.status(500).send({
+            message: err.message || "Error deleting Competence."
+        });
     }
-
-    res.status(204).send();
-  } catch (err) {
-    res.status(500).send({
-      message: err.message || "Error deleting Competence."
-    });
-  }
 };

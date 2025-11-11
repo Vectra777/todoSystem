@@ -60,14 +60,19 @@ router.get('/admin-panel', localOnlyOrToken, (req, res) => {
 // Handle form POST to create admin
 router.post('/admin-panel/create', localOnlyOrToken, express.urlencoded({ extended: true }), async (req, res) => {
   try {
-    // Delegate to controller's createAdmin (it will also allow localhost)
-    await companyController.createCompany(req, res);
+    const company = await companyController.createCompany(req, res);
+    
+    if (company && company.id) {
+        req.body.company_id = company.id;
+    } else {
+        return res.status(500).send('Internal error: Failed to retrieve the newly created Company ID.');
+    }
     await employeeController.createAdmin(req, res);
+    
   } catch (err) {
     res.status(500).send('Internal error: ' + (err.message || 'unknown'));
   }
 });
-
 module.exports = (app) => {
   app.use('/', router);
 };

@@ -5,7 +5,7 @@ const utils = require('../authentication/utils');
 
 const HR_ROLES = ['hr', 'rh', 'admin'];
 
-// Sanitize employee data (remove sensitive fields)
+// Sanitize employee data
 function sanitizeEmployee(employeeInstance) {
     if (!employeeInstance) return null;
     const plain = employeeInstance.toJSON ? employeeInstance.toJSON() : employeeInstance;
@@ -15,7 +15,8 @@ function sanitizeEmployee(employeeInstance) {
         lastname: plain.lastname,
         email: plain.email,
         role: plain.role,
-        is_active: plain.is_active
+        is_active: plain.is_active,
+        company_id: plain.company_id 
     };
 }
 
@@ -25,7 +26,6 @@ async function generateNextEmployeeId() {
     if (!last) return 'e1';
     let num = parseInt(last.id.slice(1)) + 1;
 
-    // Vérifier que l’ID n’existe pas déjà
     let candidate = 'e' + num;
     while (await Employee.findOne({ where: { id: candidate } })) {
         num++;
@@ -35,9 +35,19 @@ async function generateNextEmployeeId() {
 }
 
 
-// Create a new Employee
+// Create a new Employee 
 exports.create = async (req, res) => {
-    if (!ensureAuthenticated(req, res)) return;
+    // Authenticate and get caller's data
+    const decodedUser = ensureAuthenticated(req, res);
+    console.log('Decoded user from token:', decodedUser);
+    if (!decodedUser) return;
+    
+    // Get the company_id from the authenticated caller (Admin/HR)
+    const callerCompanyId = decodedUser.company_id;
+
+    if (!callerCompanyId) {
+        return res.status(500).send({ message: "Internal Error: Caller's company ID is missing." });
+    }
 
     // Validate request
     if (!req.body.firstname || !req.body.lastname || !req.body.email) {
@@ -48,14 +58,12 @@ exports.create = async (req, res) => {
     }
 
     try {
-        // Hash the password
         const password = req.body.password || 'password';
         const password_hash = await hashPassword(password);
 
-        // Create an Employee
-        // Prevent creating 'admin' via this route — use createAdmin for that.
         let requestedRole = (req.body.role || 'employee').toString().toLowerCase();
         if (requestedRole === 'admin') requestedRole = 'employee';
+        
         const employee = {
             id: await generateNextEmployeeId(),
             firstname: req.body.firstname,
@@ -63,10 +71,11 @@ exports.create = async (req, res) => {
             email: req.body.email,
             password_hash: password_hash,
             role: requestedRole,
-            is_active: false
+            is_active: false,
+            // ASSIGN CALLER'S company_id
+            company_id: callerCompanyId 
         };
 
-        // Save Employee in the database
         const data = await Employee.create(employee);
         res.send(data);
     } catch (err) {
@@ -77,14 +86,11 @@ exports.create = async (req, res) => {
 };
 
 
-
-
 // Retrieve all Employees
 exports.findAll = (req, res) => {
     if (!ensureAuthenticated(req, res)) return;
     Employee.findAll()
         .then(data => {
-            // Sanitize employee data before sending
             const sanitized = data.map(emp => sanitizeEmployee(emp));
             res.send(sanitized);
         })
@@ -96,30 +102,37 @@ exports.findAll = (req, res) => {
         });
 }
 
-// Create a new Admin user (only callable by existing admin)
+// Create a new Admin user
 exports.createAdmin = async (req, res) => {
-    // DEBUG: afficher tout ce qui arrive
     console.log('--- New createAdmin request ---');
-    console.log('Headers:', req.headers);
-    console.log('IP:', req.ip || req.connection.remoteAddress);
-    console.log('Raw body:', req.body);
-    console.log('Body keys:', Object.keys(req.body));
-
-    // allow programmatic calls from localhost OR authenticated admin users
+    
     const hasAuthHeader = req.headers && req.headers.authorization;
+    let callerCompanyId = null;
+
+    // Authentication and getting caller's company_id
     if (hasAuthHeader) {
         const decoded = ensureAuthenticated(req, res);
-        if (!decoded) return; // ensureAuthenticated already sent response
+        if (!decoded) return;
         const callerRole = (decoded.role || '').toLowerCase();
+        callerCompanyId = decoded.company_id; // Get company_id from the authenticated caller
+
         if (callerRole !== 'admin') return res.status(403).send({ message: 'Forbidden: admin role required' });
     } else {
+        // Localhost logic for initial setup
         const ip = req.ip || req.connection.remoteAddress || '';
         if (!(ip === '::1' || ip === '127.0.0.1' || ip === '::ffff:127.0.0.1')) {
             return res.status(403).send({ message: 'Forbidden: admin creation allowed only from localhost or by authenticated admin' });
         }
     }
 
-    // Validate request
+    // Determine company_id for the new Admin
+    let adminCompanyId = req.body.company_id || callerCompanyId;
+
+    if (!adminCompanyId) {
+        return res.status(400).send({ message: "Company ID is required for the new Admin." });
+    }
+
+    // Validation
     if (!req.body.firstname || !req.body.lastname || !req.body.email) {
         console.log('Validation failed: missing fields');
         res.status(400).send({ message: "Firstname, lastname and email are required!" });
@@ -129,13 +142,12 @@ exports.createAdmin = async (req, res) => {
     try {
         const normalizedEmail = String(req.body.email).toLowerCase();
 
-        // Prevent duplicate accounts for same email
+        // Prevent duplicate accounts
         const existing = await Employee.findOne({ where: { email: normalizedEmail } });
         if (existing) {
             return res.status(409).send({ message: 'An account already exists for this email address' });
         }
 
-        // Hash the password
         const password = req.body.password || 'password';
         const password_hash = await hashPassword(password);
 
@@ -146,7 +158,8 @@ exports.createAdmin = async (req, res) => {
             email: normalizedEmail,
             password_hash: password_hash,
             role: 'admin',
-            is_active: true
+            is_active: true,
+            company_id: adminCompanyId 
         };
 
         const created = await Employee.create(employeePayload);
