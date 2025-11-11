@@ -106,7 +106,8 @@ async function handleMoveTask({ id, toStatus }) {
 }
 
 onMounted(() => {
-  tasksStore.initialize()
+  // Always refresh tasks on mount so simple employees see latest data
+  tasksStore.refresh()
   userStore.initialize()
 })
 

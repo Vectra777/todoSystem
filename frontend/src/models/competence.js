@@ -1,8 +1,5 @@
 export function createCompetence(data = {}) {
-  console.log('Creating competence with data:', data)
-  console.log(data.content === undefined ? 'content is undefined' : `content: ${data.content}`)
-  
-
+  // Debug logs removed in cleanup
 
   return {
     id: data.id ?? null,

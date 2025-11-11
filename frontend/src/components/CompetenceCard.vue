@@ -144,14 +144,7 @@ const progressColor = computed(() => {
 const isHRRoute = computed(() => route.matched?.some(r => r.meta && r.meta.requiresHR))
 const showProgress = computed(() => {
   const result = userStore.isHr && isHRRoute.value
-  console.log('CompetenceCard showProgress:', {
-    isHr: userStore.isHr,
-    isHRRoute: isHRRoute.value,
-    showProgress: result,
-    progress: itemObj.value.progress,
-    route: route.path,
-    routeMeta: route.matched?.map(r => r.meta)
-  })
+    // Debug logs removed in cleanup
   return result
 })
 
@@ -183,6 +176,8 @@ function openDetails() {
   text-overflow: ellipsis;
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  /* Standard property for newer browsers */
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   text-align: left;
 }

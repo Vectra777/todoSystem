@@ -161,9 +161,8 @@ const teamsLoading = ref(false)
 async function loadTeams() {
   teamsLoading.value = true
   try {
-    console.log('Loading teams...')
-    const response = await apiStore.getTeams()
-    console.log('Teams loaded:', response)
+  // Loading teams
+  const response = await apiStore.getTeams()
     
     // Load all team data immediately
     const teamsWithData = await Promise.all(response.map(async (team) => {

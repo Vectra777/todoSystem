@@ -96,6 +96,58 @@ function ensureAuthenticated(req, res) {
   }
 }
 
+async function isAdmin(tokenOrHeader) {
+  try {
+    if (!tokenOrHeader) return false;
+    const token = String(tokenOrHeader).startsWith('Bearer ') ? String(tokenOrHeader).split(' ')[1] : tokenOrHeader;
+    const decoded = verifyAccessToken(token);
+    if (!decoded || !decoded.id) return false;
+    // Lazy-require DB to avoid circular requires at module init
+    const db = require('../models');
+    const Employee = db.employees;
+    const user = await Employee.findByPk(decoded.id);
+    if (!user) return false;
+    const role = (user.role || '').toString().toLowerCase();
+    return role === 'admin';
+  } catch (err) {
+    return false;
+  }
+}
+
+async function isHr(tokenOrHeader) {
+  try {
+    if (!tokenOrHeader) return false;
+    const token = String(tokenOrHeader).startsWith('Bearer ') ? String(tokenOrHeader).split(' ')[1] : tokenOrHeader;
+    const decoded = verifyAccessToken(token);
+    if (!decoded || !decoded.id) return false;
+    const db = require('../models');
+    const Employee = db.employees;
+    const user = await Employee.findByPk(decoded.id);
+    if (!user) return false;
+    const role = (user.role || '').toString().toLowerCase();
+    return role === 'hr' || role === 'admin';
+  } catch (err) {
+    return false;
+  }
+}
+
+/**
+ * Middleware to protect GET endpoints: only HR or Admin can access.
+ * Expects Authorization: Bearer <token> header.
+ */
+async function ensureGetAllowed(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ message: 'Authorization header is missing' });
+    const admin = await isAdmin(authHeader);
+    const hr = await isHr(authHeader);
+    if (admin || hr) return next();
+    return res.status(403).json({ message: 'Forbidden: HR or Admin role required' });
+  } catch (err) {
+    return res.status(403).json({ message: 'Forbidden' });
+  }
+}
+
 module.exports = {
   generateAccessToken,
   generateRefreshToken,
@@ -106,5 +158,45 @@ module.exports = {
   ensureAuthenticated,
   hashPassword,
   comparePassword,
-  refreshTokens
+  refreshTokens,
+  isAdmin,
+  isHr,
+  ensureGetAllowed
 };
+
+
+async function ensureSelfOrHrOrAdmin(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ message: 'Authorization header is missing' });
+    // Check roles first
+    const admin = await isAdmin(authHeader);
+    const hr = await isHr(authHeader);
+    if (admin || hr) return next();
+
+    // Otherwise decode token to check owner
+    const token = String(authHeader).startsWith('Bearer ') ? String(authHeader).split(' ')[1] : authHeader;
+    const decoded = verifyAccessToken(token);
+    if (!decoded || !decoded.id) return res.status(403).json({ message: 'Forbidden' });
+    const paramId = req.params.employeeId || req.params.employee_id || req.query.employeeId;
+    if (String(decoded.id) === String(paramId)) return next();
+    return res.status(403).json({ message: 'Forbidden: not allowed' });
+  } catch (err) {
+    return res.status(403).json({ message: 'Forbidden' });
+  }
+}
+
+module.exports.ensureSelfOrHrOrAdmin = ensureSelfOrHrOrAdmin;
+
+/**
+ * Middleware: ensure requester is an Admin (authorization required).
+ */
+function ensureAdmin(req, res, next) {
+  const decoded = ensureAuthenticated(req, res);
+  if (!decoded) return; // ensureAuthenticated already sent response
+  const role = (decoded.role || '').toString().toLowerCase();
+  if (role !== 'admin') return res.status(403).json({ message: 'Admin role required' });
+  return next();
+}
+
+module.exports.ensureAdmin = ensureAdmin;

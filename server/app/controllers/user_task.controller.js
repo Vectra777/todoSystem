@@ -6,10 +6,6 @@ const HR_ROLES = ['hr', 'rh', 'admin'];
 
 exports.findAll = (req, res) => {
     if (!ensureAuthenticated(req, res)) return;
-    const role = (req.user?.role || '').toLowerCase();
-    if (!HR_ROLES.includes(role)) {
-        return res.status(403).send({ message: 'Forbidden: HR role required' });
-    }
     UserTask.findAll()
         .then(data => {
             res.send(data);

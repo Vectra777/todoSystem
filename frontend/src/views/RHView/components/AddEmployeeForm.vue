@@ -45,7 +45,8 @@
             <option value="" disabled>Select Role</option>
             <option value="employee">Employee</option>
             <option value="hr">HR</option>
-            <option value="admin">Admin</option>
+            <!-- Only show Admin option to existing admins -->
+            <option v-if="userStore.isAdmin" value="admin">Admin</option>
           </select>
         </div>
         <div class="col-md">
@@ -72,8 +73,10 @@
 <script setup>
 import { ref } from 'vue'
 import { useApiStore } from '../../../stores/api'
+import { useUserStore } from '../../../stores/user'
 
 const apiStore = useApiStore()
+const userStore = useUserStore()
 const emit = defineEmits(['employee-created'])
 
 const formData = ref({
@@ -92,8 +95,14 @@ async function handleSubmit() {
   message.value = ''
   loading.value = true
 
-  try {
-    const employee = await apiStore.createEmployee(formData.value)
+    try {
+    let employee
+    if (formData.value.role === 'admin') {
+      // Use dedicated admin creation endpoint
+      employee = await apiStore.createAdmin(formData.value)
+    } else {
+      employee = await apiStore.createEmployee(formData.value)
+    }
     message.value = `Employee ${employee.firstname} ${employee.lastname} created successfully!`
     messageType.value = 'success'
     

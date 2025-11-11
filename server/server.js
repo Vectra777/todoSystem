@@ -8,6 +8,33 @@ require('dotenv').config();
 const app = express();
 
 
+// Simple server monitoring dashboard (optional)
+// - Install with: npm install express-status-monitor
+// - Configure access via MONITOR_TOKEN env var (if not set, access is limited to localhost)
+const statusMonitor = require('express-status-monitor');
+const monitorMiddleware = statusMonitor({ title: 'Todo System Monitor' });
+app.use(monitorMiddleware);
+
+function monitorAuth(req, res, next) {
+  const token = process.env.MONITOR_TOKEN;
+  // If no token provided, allow only localhost access
+  if (!token) {
+    const ip = req.ip || req.connection.remoteAddress || '';
+    if (ip === '::1' || ip === '127.0.0.1' || ip === '::ffff:127.0.0.1') return next();
+    return res.status(403).send('Monitor access restricted to localhost (set MONITOR_TOKEN to enable remote access)');
+  }
+
+  // Token provided: accept via Authorization: Bearer <token> or query ?token=
+  const auth = req.headers.authorization;
+  if (auth && auth.split(' ')[1] === token) return next();
+  if (req.query && req.query.token === token) return next();
+  return res.status(403).send('Forbidden');
+}
+
+// Expose monitor UI at /monitor (protected)
+app.get('/monitor', monitorAuth, monitorMiddleware.pageRoute);
+
+
 const corsOptions = {
   origin: ['http://localhost:5173', 'http://localhost:3000'],
   credentials: true
@@ -26,6 +53,7 @@ app.get('/', (req, res) => {
 
 // Routes (auth + CRUD)
 require('./app/routes/employee.route.js')(app);
+require('./app/routes/admin.route.js')(app);
 require('./app/routes/team.route.js')(app);
 require('./app/routes/team_member.route.js')(app);
 require('./app/routes/competence.route.js')(app);

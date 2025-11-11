@@ -350,18 +350,15 @@ function calculateProgress(status) {
 }
 
 function handleTeamCreated(team) {
-  console.log('Team created:', team)
   // Force TeamList to refresh
   teamListKey.value++
 }
 
 function handleEmployeeCreated(employee) {
-  console.log('Employee created:', employee)
   // No need to refresh TeamList for employee creation alone
 }
 
 function handleMemberAdded(data) {
-  console.log('Member added to team:', data)
   // Force TeamList to refresh
   teamListKey.value++
 }

@@ -412,19 +412,11 @@ export const useTasksStore = defineStore("tasks", {
         const apiStore = useApiStore();
         const userStore = useUserStore();
 
-        console.log('updateTask called:', { 
-          id, 
-          partial, 
-          userRole: userStore.role,
-          isHr: userStore.isHr, 
-          userId: userStore.id,
-          hasStatus: !!partial.status,
-          hasTitle: !!partial.title
-        });
+        // updateTask called (debug logs removed in cleanup)
 
         // If HR is updating the competence details
         if (userStore.isHr) {
-          console.log('Taking HR update path - updating competence metadata');
+          // HR update path
           const competenceData = {
             title: partial.title,
             description: partial.content || partial.description,
@@ -433,16 +425,16 @@ export const useTasksStore = defineStore("tasks", {
             end_date: partial.end_date,
             members: partial.members || []
           };
-          console.log('Calling updateCompetence with:', competenceData);
+          // Calling updateCompetence with competenceData
           await apiStore.updateCompetence(id, competenceData);
         }
         // If status is being updated by an employee, update the UserTask
         else if (partial.status && userStore.id) {
-          console.log('Taking Employee update path - updating user task status');
+          // Employee update path - updating user task status
           try {
             // Map frontend status to backend status
             const backendStatus = this.mapStatusToBackend(partial.status);
-            console.log('Calling updateMyTask with status:', backendStatus);
+            // Calling updateMyTask with mapped backend status
             await apiStore.updateMyTask(id, {
               status: backendStatus
             });
@@ -455,7 +447,7 @@ export const useTasksStore = defineStore("tasks", {
           }
         }
         
-        console.log('Updating local store');
+  // Update local store
         // Update local store
         const index = this.items.findIndex(
           (task) => String(task.id) === String(id)

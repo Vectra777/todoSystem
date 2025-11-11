@@ -255,6 +255,12 @@ export const useApiStore = defineStore('api', {
         body: JSON.stringify(employeeData)
       })
     },
+    async createAdmin(employeeData) {
+      return this.request('/employee/admin', {
+        method: 'POST',
+        body: JSON.stringify(employeeData)
+      })
+    },
 
     // Teams
     async getTeams() {
