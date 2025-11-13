@@ -1,9 +1,7 @@
-    
-
-module.exports ={
-    HOST: 'localhost',
-    USER: 'root',
-    PASSWORD: 'root',
-    DB: 'db_todo',
-    dialect: 'mysql'
-}
+module.exports = {
+  HOST: "localhost",
+  USER: "admin",
+  PASSWORD: "Fanfan0505",
+  DB: "db_todo",
+  dialect: "mysql",
+};

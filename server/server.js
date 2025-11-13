@@ -9,6 +9,8 @@ require('dotenv').config();
 
 const app = express();
 
+const RESET_DB_ON_START = String(process.env.DB_RESET || '').toLowerCase() === 'true';
+
 
 // Simple server monitoring dashboard (optional)
 // - Install with: npm install express-status-monitor
@@ -50,32 +52,59 @@ app.use(bodyParser.urlencoded({ extended: true }));
 const db = require('./app/models');
 const sqlFilePath = path.join(__dirname, 'app', 'data', 'default.sql');
 
-// Drop and recreate all tables
-db.connex
-  .sync({ force: true }) // Deletes all existing tables!
-  .then(async () => {
-    console.log('✅ Database synchronized (existing tables dropped)');
+async function databaseHasSeedData() {
+  try {
+    const [employeeCount, competenceCount] = await Promise.all([
+      db.employees.count(),
+      db.competences.count()
+    ]);
+    return employeeCount > 0 || competenceCount > 0;
+  } catch (err) {
+    console.warn('⚠️ Unable to inspect existing data, assuming database is empty:', err.message);
+    return false;
+  }
+}
 
-    // Load and execute SQL file if it exists
-    if (fs.existsSync(sqlFilePath)) {
-      const sql = fs.readFileSync(sqlFilePath, 'utf8');
-      const queries = sql
-        .split(';')
-        .map(q => q.trim())
-        .filter(q => q.length > 0);
+async function loadDefaultSqlIfNeeded(forceSeed = false) {
+  const hasData = await databaseHasSeedData();
+  if (!forceSeed && hasData) {
+    console.log('ℹ️ Existing data detected; skipping default SQL import.');
+    return;
+  }
 
-      for (const query of queries) {
-        try {
-          await db.connex.query(query);
-        } catch (err) {
-          console.error('❌ Error executing query:', query, err.message);
-        }
-      }
+  if (!fs.existsSync(sqlFilePath)) {
+    console.warn('⚠️ Default SQL file not found:', sqlFilePath);
+    return;
+  }
 
-      console.log('📦 Default SQL file loaded successfully.');
-    } else {
-      console.warn('⚠️ Default SQL file not found:', sqlFilePath);
+  console.log(forceSeed ? '📦 Reloading default SQL data (forced).' : '📦 Database empty. Loading default SQL data.');
+  const sql = fs.readFileSync(sqlFilePath, 'utf8');
+  const queries = sql
+    .split(';')
+    .map(q => q.trim())
+    .filter(q => q.length > 0);
+
+  for (const query of queries) {
+    try {
+      await db.connex.query(query);
+    } catch (err) {
+      console.error('❌ Error executing query:', query, err.message);
     }
+  }
+
+  console.log('✅ Default SQL data ensured.');
+}
+
+// Synchronize models without destroying data unless explicitly requested
+db.connex
+  .sync({ force: RESET_DB_ON_START })
+  .then(async () => {
+    if (RESET_DB_ON_START) {
+      console.log('✅ Database synchronized with force=true (DB_RESET flag set).');
+    } else {
+      console.log('✅ Database synchronized (existing data preserved).');
+    }
+    await loadDefaultSqlIfNeeded(RESET_DB_ON_START);
   })
   .catch(err => {
     console.error('❌ Error synchronizing database:', err);
@@ -93,6 +122,7 @@ require('./app/routes/team_member.route.js')(app);
 require('./app/routes/competence.route.js')(app);
 require('./app/routes/user_task.route.js')(app);
 require('./app/routes/search.route.js')(app);
+require('./app/routes/file.route.js')(app);
 
 const PORT = 8080;
 app.listen(PORT, () => {
