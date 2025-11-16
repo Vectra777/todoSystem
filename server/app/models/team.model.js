@@ -18,7 +18,7 @@ module.exports = (connex, Sequelize) => {
             type: Sequelize.DATE,
             defaultValue: Sequelize.NOW
         },
-        company: {
+        company_id: {
             type: Sequelize.INTEGER,
             allowNull: true,
             references: {
