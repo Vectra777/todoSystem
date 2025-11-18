@@ -415,7 +415,11 @@ export default {
     task: { type: Object, required: true },
     mainView: { type: Boolean, default: false },
     lookAsHR: { type: Boolean, default: false },
-  },
+    newTask: {
+      type: Boolean,
+      default: false,
+      required: false,
+   }},
   data() {
     return {
       currentMode: "view",
@@ -437,6 +441,9 @@ export default {
     await this.loadTeamsAndEmployees();
     if (this.task.id) {
       await this.loadFiles();
+    }
+    if(this.newTask) {
+      this.currentMode = 'edit';
     }
   },
   computed: {
@@ -552,6 +559,7 @@ export default {
       // For this example, we save the full object list
       if (this.isFormValid) {
         this.$emit("save", this.localTask);
+        console.log('Task saved:', this.localTask);
         this.currentMode = "view";
       }
     },

@@ -55,6 +55,7 @@
       @close="selectedTask = null"
       @save="handleSaveTask"
       @delete="handleDeleteTask"
+      :newTask="isNewTask"
     />
     <Footer />
   </div>
@@ -90,6 +91,7 @@ const employees = ref([])
 const employeesLoading = ref(false)
 const employeeTeamsCache = reactive({})
 const selectedEmployeeTeams = ref([])
+const isNewTask = ref(false)
 
 function formatEmployeeName(employee) {
   if (!employee) return ''
@@ -282,15 +284,16 @@ function handleTitleChange(title) {
 function openTaskDetails(task) {
   selectedTask.value = { ...task }
   isMainView.value = false
+  isNewTask.value = false
 }
 
 function handleAddNewCompetence() {
+  isNewTask.value = true
   selectedTask.value = {
     id: null,
     title: 'New Competence',
-    content: '',
-    label: '',
-    status: 'to do',
+    content: 'This is a new competence description.',
+    label: 'Default Label',
     progress: 0,
     start_date: null,
     end_date: null,
