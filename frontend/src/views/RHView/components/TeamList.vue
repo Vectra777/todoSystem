@@ -15,7 +15,7 @@
       <p>No teams found. Create a team to get started!</p>
     </div>
 
-    <div v-else v-for="team in filteredTeams" :key="team.id" class="border-bottom py-3">
+    <div v-else v-for="team in displayTeams" :key="team.id" class="border-bottom py-3">
       <div
         class="row align-items-center bg-body p-3 gx-2"
         style="cursor: pointer"
@@ -150,6 +150,14 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  focusTeamId: {
+    type: String,
+    default: null,
+  },
+  visibleTeamIds: {
+    type: Array,
+    default: () => []
+  }
 })
 
 const apiStore = useApiStore()
@@ -237,9 +245,26 @@ watch(() => props.allCompetences, () => {
   updateTeamCounts()
 })
 
-const filteredTeams = computed(() => {
-  // Always show all teams
-  return teams.value
+watch(() => props.focusTeamId, (newId) => {
+  if (newId) focusTeamById(newId)
+})
+
+watch(teams, () => {
+  if (props.focusTeamId) focusTeamById(props.focusTeamId)
+})
+
+watch(() => props.visibleTeamIds, (ids = []) => {
+  if (!ids.length) return
+  if (openTeamId.value && !ids.includes(openTeamId.value)) {
+    openTeamId.value = null
+  }
+})
+
+const displayTeams = computed(() => {
+  const ids = props.visibleTeamIds || []
+  if (!ids.length) return teams.value
+  const idSet = new Set(ids)
+  return teams.value.filter(team => idSet.has(team.id))
 })
 
 async function fetchTeamData(team) {
@@ -279,6 +304,17 @@ async function fetchTeamData(team) {
   }
 }
 
+async function focusTeamById(teamId) {
+  const team = teams.value.find(t => t.id === teamId)
+  if (!team) return
+  openTeamId.value = teamId
+  memberSearchQuery.value = ''
+
+  if (!team.hasLoaded) {
+    await fetchTeamData(team)
+  }
+}
+
 function toggleTeam(team) {
   if (openTeamId.value === team.id) {
     openTeamId.value = null
@@ -292,7 +328,7 @@ const filteredMembers = computed(() => {
   if (openTeamId.value === null) {
     return []
   }
-  const team = filteredTeams.value.find((t) => t.id === openTeamId.value)
+  const team = displayTeams.value.find((t) => t.id === openTeamId.value)
   if (!team || !team.members) {
     return []
   }

@@ -5,9 +5,9 @@
       <div class="container">
         <SearchBar
           v-model="searchQuery"
-          :suggestions="filteredSuggestions"
-          :loading="employeesLoading"
-          @item-selected="handleEmployeeSelected"
+          :suggestions="searchSuggestions"
+          :loading="searchLoading"
+          @item-selected="handleSearchSelection"
         />
         <TeamList
           :key="teamListKey"
@@ -15,6 +15,8 @@
           :selected-employee="selectedEmployee"
           :all-employees="employees"
           :all-competences="tasks"
+          :focus-team-id="selectedTeamId"
+          :visible-team-ids="visibleTeamIds"
         />
 
         <template v-if="!selectedEmployee">
@@ -87,11 +89,23 @@ const teamListKey = ref(0) // Key to force TeamList refresh
 
 const searchQuery = ref('')
 const selectedEmployee = ref(null)
+const selectedTeamId = ref(null)
+const selectedTeamName = ref('')
+const searchSuggestions = ref([])
+const searchLoading = ref(false)
 const employees = ref([])
 const employeesLoading = ref(false)
 const employeeTeamsCache = reactive({})
 const selectedEmployeeTeams = ref([])
 const isNewTask = ref(false)
+let searchDebounceHandle = null
+const visibleTeamIds = computed(() => {
+  if (selectedTeamId.value) return [selectedTeamId.value]
+  if (selectedEmployee.value && selectedEmployeeTeams.value.length > 0) {
+    return selectedEmployeeTeams.value.map(team => team.id)
+  }
+  return []
+})
 
 function formatEmployeeName(employee) {
   if (!employee) return ''
@@ -99,6 +113,14 @@ function formatEmployeeName(employee) {
   const last = (employee.lastname || '').trim()
   const fullName = `${first} ${last}`.trim()
   return fullName || employee.email || 'Unknown employee'
+}
+
+function formatTeamName(team) {
+  if (!team) return ''
+  return (
+    (team.team_name || team.teamName || team.name || '').trim() ||
+    `Team ${team.id}`
+  )
 }
 
 async function loadEmployees() {
@@ -149,48 +171,117 @@ function invalidateEmployeeTeams(employeeId) {
   }
 }
 
-const filteredSuggestions = computed(() => {
-  if (
-    !searchQuery.value ||
-    (selectedEmployee.value &&
-      searchQuery.value === formatEmployeeName(selectedEmployee.value))
-  ) {
-    return []
+async function fetchSearchSuggestions(input) {
+  const term = input?.trim()
+  if (!term) {
+    searchSuggestions.value = []
+    return
   }
 
-  const query = searchQuery.value.toLowerCase()
-  return employees.value
-    .filter((emp) => {
-      const nameMatch = formatEmployeeName(emp).toLowerCase().includes(query)
-      const emailMatch = (emp.email || '').toLowerCase().includes(query)
-      return nameMatch || emailMatch
+  searchLoading.value = true
+  try {
+    const response = await apiStore.search(term)
+    const results = Array.isArray(response)
+      ? response
+      : Array.isArray(response?.results) ? response.results : []
+
+    searchSuggestions.value = results.map(result => {
+      if (result.type === 'team') {
+        return {
+          ...result,
+          name: formatTeamName(result)
+        }
+      }
+      return result
     })
-    .slice(0, 20)
-    .map(emp => ({
-      ...emp,
-      teams: (employeeTeamsCache[emp.id] || []).map(team => team.name).filter(Boolean)
-    }))
-})
+  } catch (error) {
+    console.error('Failed to search employees/teams:', error)
+    searchSuggestions.value = []
+  } finally {
+    searchLoading.value = false
+  }
+}
+
+async function handleSearchSelection(item) {
+  if (!item) return
+  if (item.type === 'team') {
+    await handleTeamSelected(item)
+  } else {
+    await handleEmployeeSelected(item)
+  }
+}
 
 async function handleEmployeeSelected(employee) {
   if (!employee) return
   selectedEmployee.value = employee
+  selectedTeamId.value = null
+  selectedTeamName.value = ''
   searchQuery.value = formatEmployeeName(employee)
   selectedEmployeeTeams.value = []
   selectedEmployeeTeams.value = await ensureEmployeeTeams(employee.id)
+  searchSuggestions.value = []
+}
+
+async function handleTeamSelected(team) {
+  if (!team) return
+  selectedTeamId.value = team.id
+  selectedTeamName.value = formatTeamName(team)
+  selectedEmployee.value = null
+  selectedEmployeeTeams.value = []
+  searchQuery.value = selectedTeamName.value
+  searchSuggestions.value = []
 }
 
 watch(searchQuery, (newQuery) => {
-  if (!newQuery) {
+  const normalized = (newQuery || '').trim()
+
+  if (searchDebounceHandle) {
+    clearTimeout(searchDebounceHandle)
+    searchDebounceHandle = null
+  }
+
+  if (!normalized) {
     selectedEmployee.value = null
     selectedEmployeeTeams.value = []
-  } else if (
+    selectedTeamId.value = null
+    selectedTeamName.value = ''
+    searchSuggestions.value = []
+    return
+  }
+
+  if (
     selectedEmployee.value &&
-    newQuery !== formatEmployeeName(selectedEmployee.value)
+    normalized !== formatEmployeeName(selectedEmployee.value)
   ) {
     selectedEmployee.value = null
     selectedEmployeeTeams.value = []
   }
+
+  if (
+    selectedTeamId.value &&
+    normalized !== (selectedTeamName.value || '').trim()
+  ) {
+    selectedTeamId.value = null
+    selectedTeamName.value = ''
+  }
+
+  const matchesCurrentSelection =
+    (selectedEmployee.value && normalized === formatEmployeeName(selectedEmployee.value)) ||
+    (selectedTeamId.value && normalized === (selectedTeamName.value || '').trim())
+
+  if (matchesCurrentSelection) {
+    searchSuggestions.value = []
+    return
+  }
+
+  if (normalized.length < 2) {
+    searchSuggestions.value = []
+    return
+  }
+
+  searchDebounceHandle = setTimeout(() => {
+    fetchSearchSuggestions(normalized)
+  }, 300)
 })
 
 const currentSort = ref('')
@@ -201,7 +292,11 @@ const currentTitleFilter = ref('')
 const skillItems = computed(() => {
   let items = [...tasks.value]
 
-  if (selectedEmployee.value) {
+  if (selectedTeamId.value) {
+    items = items.filter(task =>
+      (task.teams || []).some(team => team.id === selectedTeamId.value)
+    )
+  } else if (selectedEmployee.value) {
     const employeeId = selectedEmployee.value.id
     const teamIds = selectedEmployeeTeams.value.map(team => team.id)
 
