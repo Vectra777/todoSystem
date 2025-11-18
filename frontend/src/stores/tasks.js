@@ -467,6 +467,37 @@ export const useTasksStore = defineStore("tasks", {
       }
     },
 
+    async updateTaskUser(competence) {
+        console.log('updateTaskUser called with:', JSON.stringify( competence));
+        const apiStore = useApiStore();
+        const userStore = useUserStore();
+    
+          try {
+            // Map frontend status to backend status
+            const backendStatus = this.mapStatusToBackend(competence.status);
+            // Calling updateMyTask with mapped backend status
+            await apiStore.updateMyTask(competence);
+          } catch (statusError) {
+            console.error('Failed to update task status:', statusError);
+            throw statusError;
+          }
+        
+        
+        // Update local store
+        const index = this.items.findIndex(
+          (task) => String(task.id) === String(competence.id)
+        );
+        if (index !== -1) {
+          this.items[index] = {
+            ...this.items[index],
+            ...competence,
+            id: this.items[index].id,
+          };
+          this.saveSnapshot();
+          return this.items[index];
+        }
+    },
+
     async deleteTask(id) {
       try {
         const apiStore = useApiStore();

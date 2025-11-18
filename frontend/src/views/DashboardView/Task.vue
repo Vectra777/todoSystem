@@ -126,7 +126,7 @@ function handleOpenTask(task) {
 
 async function handleSaveTask(updated) {
   try {
-    await tasksStore.updateTask(updated.id, updated)
+    await tasksStore.updateTaskUser(updated)
     selectedTask.value = null
   } catch (e) {
     alert('Failed to save: ' + (e?.message || e))
