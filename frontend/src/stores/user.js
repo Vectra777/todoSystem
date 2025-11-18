@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 const USER_STORAGE_KEY = 'todo-current-user'
 const DEFAULT_ROLE = 'admin'
 const VALID_ROLES = ['employee', 'admin','hr']
+const TOKEN_CLOCK_SKEW_MS = 30 * 1000
 
 function readStoredUser() {
   if (typeof window === 'undefined') return null
@@ -31,6 +32,22 @@ function normalizeRole(role) {
   return VALID_ROLES.includes(normalized) ? normalized : DEFAULT_ROLE
 }
 
+function decodeJwtPayload(token) {
+  if (!token || typeof token !== 'string') return null
+  const parts = token.split('.')
+  if (parts.length < 2) return null
+
+  try {
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=')
+    const json = atob(padded)
+    return JSON.parse(json)
+  } catch (error) {
+    console.warn('Unable to decode JWT payload', error)
+    return null
+  }
+}
+
 export const useUserStore = defineStore('user', {
   state: () => ({
     id: null,
@@ -47,6 +64,18 @@ export const useUserStore = defineStore('user', {
     isHr: (state) => state.role === 'hr' || state.role === 'admin', // Admin can also act as HR
     isEmployee: (state) => state.role === 'employee',
     isAuthenticated: (state) => !!state.token,
+    tokenPayload: (state) => decodeJwtPayload(state.token),
+    tokenExpiry() {
+      const payload = this.tokenPayload
+      if (!payload?.exp) return null
+      return payload.exp * 1000
+    },
+    isTokenExpired(state) {
+      if (!state.token) return true
+      const expiry = this.tokenExpiry
+      if (!expiry) return false
+      return expiry - TOKEN_CLOCK_SKEW_MS <= Date.now()
+    },
     displayName: (state) => {
       const first = state.firstname?.trim()
       const last = state.lastname?.trim()

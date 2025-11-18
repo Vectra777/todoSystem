@@ -35,7 +35,13 @@ function similarityScore(a, b) {
 }
 
 exports.fuzzy = async (req, res) => {
-  if (!ensureAuthenticated(req, res)) return;
+  const decodedUser = ensureAuthenticated(req, res);
+  if (!decodedUser) return;
+
+  const callerCompanyId = decodedUser.company_id;
+  if (!callerCompanyId) {
+    return res.status(400).send({ message: 'Company context missing for current user.' });
+  }
   const q = (req.query.q || "").trim();
   if (!q)
     return res.status(400).send({ message: "Query parameter q is required" });
@@ -45,10 +51,12 @@ exports.fuzzy = async (req, res) => {
     const [teams, employees] = await Promise.all([
       Team.findAll({
         attributes: ["id", "team_name", "description"],
+        where: { company_id: callerCompanyId },
         limit: 200,
       }),
       Employee.findAll({
         attributes: ["id", "firstname", "lastname", "email", "role"],
+        where: { company_id: callerCompanyId },
         limit: 1000,
       }),
     ]);

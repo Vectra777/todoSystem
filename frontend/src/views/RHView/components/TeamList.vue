@@ -211,15 +211,21 @@ function updateTeamCounts() {
   if (!props.allEmployees.length && !props.allCompetences.length) return
 
   for (const team of teams.value) {
-    const teamMembers = props.allEmployees.filter((employee) =>
-      employee.teams.includes(team.name)
-    )
-    team.employees = teamMembers.length
-    
-    const teamCompetences = props.allCompetences.filter(
-      (c) => c.label === team.name
-    )
-    team.skills = teamCompetences.length
+    if (team.hasLoaded) continue
+
+    if (props.allEmployees.length) {
+      const teamMembers = props.allEmployees.filter((employee) =>
+        Array.isArray(employee.teams) && employee.teams.includes(team.name)
+      )
+      team.employees = teamMembers.length
+    }
+
+    if (props.allCompetences.length) {
+      const teamCompetences = props.allCompetences.filter(
+        (c) => c.label === team.name
+      )
+      team.skills = teamCompetences.length
+    }
   }
 }
 
@@ -258,7 +264,7 @@ async function fetchTeamData(team) {
     
     // Fallback to props data if available
     const teamMembers = props.allEmployees.filter((employee) =>
-      employee.teams && employee.teams.includes(team.name)
+      Array.isArray(employee.teams) && employee.teams.includes(team.name)
     )
     const teamCompetences = props.allCompetences.filter(
       (c) => c.label === team.name

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { useUserStore } from './user'
+import { getRouterInstance } from '../utils/routerInstance'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
 const REFRESH_TOKEN_KEY = 'todo-refresh-token'
@@ -35,6 +36,29 @@ export const useApiStore = defineStore('api', {
   }),
 
   actions: {
+    handleUnauthorized({ redirect = true, reason = 'sessionExpired', redirectPath } = {}) {
+      const userStore = useUserStore()
+
+      this.clearTokens()
+      userStore.clearUser()
+
+      if (!redirect) return
+
+      const routerInstance = getRouterInstance()
+      if (!routerInstance) return
+
+      const currentRoute = routerInstance.currentRoute?.value
+      const alreadyOnLogin = currentRoute?.path === '/login'
+      if (alreadyOnLogin) return
+
+      const query = {}
+      if (reason) query.reason = reason
+      const fallbackRedirect = redirectPath || (currentRoute?.fullPath && currentRoute.path !== '/login' ? currentRoute.fullPath : null)
+      if (fallbackRedirect) query.redirect = fallbackRedirect
+
+      routerInstance.push({ path: '/login', query: Object.keys(query).length ? query : undefined }).catch(() => {})
+    },
+
     /**
      * Make an authenticated API request
      */
@@ -58,20 +82,19 @@ export const useApiStore = defineStore('api', {
       }
 
       try {
-        const response = await fetch(url, config)
-        
-        // If unauthorized and we have a refresh token, try to refresh
+        let response = await fetch(url, config)
+
         if (response.status === 401 && this.refreshToken) {
           const newToken = await this.refreshAccessToken()
           if (newToken) {
-            // Retry the original request with new token
             headers['Authorization'] = `Bearer ${newToken}`
-            const retryResponse = await fetch(url, { ...config, headers })
-            if (!retryResponse.ok) {
-              throw new Error(`Request failed: ${retryResponse.statusText}`)
-            }
-            return await retryResponse.json()
+            response = await fetch(url, { ...config, headers })
           }
+        }
+
+        if (response.status === 401) {
+          this.handleUnauthorized({ reason: 'sessionExpired' })
+          throw new Error('Session expired. Please log in again.')
         }
 
         if (!response.ok) {
@@ -79,7 +102,6 @@ export const useApiStore = defineStore('api', {
           throw new Error(errorData.message || `Request failed: ${response.statusText}`)
         }
 
-        // Handle 204 No Content
         if (response.status === 204) {
           return null
         }
@@ -112,7 +134,6 @@ export const useApiStore = defineStore('api', {
         })
 
         if (!response.ok) {
-          // Refresh token is invalid, clear everything
           this.clearTokens()
           return null
         }

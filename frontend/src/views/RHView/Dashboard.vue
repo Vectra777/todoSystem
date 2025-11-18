@@ -6,13 +6,14 @@
         <SearchBar
           v-model="searchQuery"
           :suggestions="filteredSuggestions"
+          :loading="employeesLoading"
           @item-selected="handleEmployeeSelected"
         />
         <TeamList
           :key="teamListKey"
           class="my-4"
           :selected-employee="selectedEmployee"
-          :all-employees="fakeEmployees"
+          :all-employees="employees"
           :all-competences="tasks"
         />
 
@@ -60,8 +61,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
-import { storeToRefs } from 'pinia'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 
 import Header from '../../components/Header.vue'
 import Footer from '../../components/Footer.vue'
@@ -86,88 +86,108 @@ const teamListKey = ref(0) // Key to force TeamList refresh
 
 const searchQuery = ref('')
 const selectedEmployee = ref(null)
+const employees = ref([])
+const employeesLoading = ref(false)
+const employeeTeamsCache = reactive({})
+const selectedEmployeeTeams = ref([])
 
-const fakeEmployees = [
-  { id: 1, name: 'Alice Johnson', teams: ['Devops', 'QA'] },
-  { id: 2, name: 'Bob Smith', teams: ['Marketing'] },
-  { id: 3, name: 'Charlie Brown', teams: ['Design'] },
-  { id: 4, name: 'David Lee', teams: ['Devops'] },
-  { id: 5, name: 'Emily White', teams: ['QA'] },
-  { id: 6, name: 'Alex Dubois', teams: ['Support'] },
-  { id: 7, name: 'Alexandra Martin', teams: ['Marketing'] },
-  { id: 8, name: 'Mohammed Benali', teams: ['Support'] },
-  { id: 9, name: 'Sophie Tremblay', teams: ['Design', 'Marketing'] },
-  { id: 10, name: 'Wei Zhang', teams: ['Devops'] },
-  { id: 11, name: 'Carlos Gomez', teams: ['QA'] },
-  { id: 12, name: 'Fatima Al-Fassi', teams: ['Support'] },
-  { id: 13, name: "James O'Malley", teams: ['Support'] },
-  { id: 14, name: 'Priya Patel', teams: ['Devops'] },
-  { id: 15, name: 'Léa Fournier', teams: ['Design'] },
-  { id: 16, name: 'Kenji Watanabe', teams: ['QA'] },
-  { id: 17, name: 'Olivia Kim', teams: ['Marketing'] },
-  { id: 18, name: 'William Rousseau', teams: ['Devops', 'Support'] },
-  { id: 19, name: 'Isabella Rossi', teams: ['Design'] },
-  { id: 20, name: 'Malik Diawara', teams: ['Devops'] },
-  { id: 21, name: 'Nadia Ivanova', teams: ['QA'] },
-  { id: 22, name: 'Ethan Hunt', teams: ['Marketing', 'Support'] },
-  { id: 23, name: 'Chloé Gagnon', teams: ['Design'] },
-  { id: 24, name: 'Samuel Chen', teams: ['Design'] },
-  { id: 25, name: 'Aarav Sharma', teams: ['Devops'] },
-  { id: 26, name: 'Mia St-Pierre', teams: ['Support'] },
-  { id: 27, name: 'Benjamin Cohen', teams: ['Marketing'] },
-  { id: 28, name: 'Sofia Rodriguez', teams: ['QA'] },
-  { id: 29, name: 'Liam Murphy', teams: ['Devops'] },
-  { id: 30, name: 'Emma Leblanc', teams: ['Design', 'QA'] },
-  { id: 31, name: 'Lucas Silva', teams: ['Support'] },
-  { id: 32, name: 'Hannah Schmidt', teams: ['Marketing'] },
-  { id: 33, name: 'Antoine Lavigne', teams: ['Devops'] },
-  { id: 34, name: 'Zoé Martin', teams: ['QA'] },
-  { id: 35, name: 'Daniel Kim', teams: ['Design'] },
-  { id: 36, name: 'Gabriel Roy', teams: ['Support', 'Devops'] },
-  { id: 37, name: 'Jasmine Kaur', teams: ['Support'] },
-  { id: 38, name: 'Thomas Girard', teams: ['Marketing'] },
-  { id: 39, name: 'Yuki Tanaka', teams: ['QA'] },
-  { id: 40, name: 'Ryan Ibrahim', teams: ['Design'] },
-  { id: 41, name: 'Sara Bouchard', teams: ['Devops'] },
-  { id: 42, name: 'Elijah Brown', teams: ['Support'] },
-  { id: 43, name: 'Camila Fernandez', teams: ['Marketing'] },
-  { id: 44, name: 'Nathan Pelletier', teams: ['QA', 'Devops'] },
-  { id: 45, name: 'Maya Singh', teams: ['Design'] },
-  { id: 46, name: 'Leo Virtanen', teams: ['Devops'] },
-  { id: 47, name: 'Clara Moreau', teams: ['Support'] },
-  { id: 48, name: 'Oumar Diallo', teams: ['Marketing'] },
-  { id: 49, name: 'Felix Schneider', teams: ['QA'] },
-  { id: 50, name: 'Juliette Lavoie', teams: ['Design', 'Marketing'] },
-]
+function formatEmployeeName(employee) {
+  if (!employee) return ''
+  const first = (employee.firstname || '').trim()
+  const last = (employee.lastname || '').trim()
+  const fullName = `${first} ${last}`.trim()
+  return fullName || employee.email || 'Unknown employee'
+}
+
+async function loadEmployees() {
+  employeesLoading.value = true
+  try {
+    const response = await apiStore.getEmployees()
+    employees.value = response || []
+
+    const currentId = selectedEmployee.value?.id
+    if (currentId) {
+      const refreshed = employees.value.find(emp => emp.id === currentId)
+      if (refreshed) {
+        selectedEmployee.value = refreshed
+      } else {
+        selectedEmployee.value = null
+        selectedEmployeeTeams.value = []
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load employees:', error)
+  } finally {
+    employeesLoading.value = false
+  }
+}
+
+async function ensureEmployeeTeams(employeeId, { forceRefresh = false } = {}) {
+  if (!employeeId) return []
+  if (!employeeTeamsCache[employeeId] || forceRefresh) {
+    try {
+      const teams = await apiStore.getTeamsByEmployee(employeeId)
+      employeeTeamsCache[employeeId] = (teams || []).map(team => ({
+        id: team.id,
+        name: team.name || team.team_name || team.teamName || team.id,
+        description: team.description,
+        role: team.role
+      }))
+    } catch (error) {
+      console.error('Failed to load teams for employee:', error)
+      employeeTeamsCache[employeeId] = []
+    }
+  }
+  return employeeTeamsCache[employeeId]
+}
+
+function invalidateEmployeeTeams(employeeId) {
+  if (employeeId && employeeTeamsCache[employeeId]) {
+    delete employeeTeamsCache[employeeId]
+  }
+}
 
 const filteredSuggestions = computed(() => {
   if (
     !searchQuery.value ||
     (selectedEmployee.value &&
-      searchQuery.value === selectedEmployee.value.name)
+      searchQuery.value === formatEmployeeName(selectedEmployee.value))
   ) {
     return []
   }
 
   const query = searchQuery.value.toLowerCase()
-  return fakeEmployees
-    .filter((emp) => emp.name.toLowerCase().includes(query))
+  return employees.value
+    .filter((emp) => {
+      const nameMatch = formatEmployeeName(emp).toLowerCase().includes(query)
+      const emailMatch = (emp.email || '').toLowerCase().includes(query)
+      return nameMatch || emailMatch
+    })
     .slice(0, 20)
+    .map(emp => ({
+      ...emp,
+      teams: (employeeTeamsCache[emp.id] || []).map(team => team.name).filter(Boolean)
+    }))
 })
 
-function handleEmployeeSelected(employee) {
+async function handleEmployeeSelected(employee) {
+  if (!employee) return
   selectedEmployee.value = employee
-  searchQuery.value = employee.name
+  searchQuery.value = formatEmployeeName(employee)
+  selectedEmployeeTeams.value = []
+  selectedEmployeeTeams.value = await ensureEmployeeTeams(employee.id)
 }
 
 watch(searchQuery, (newQuery) => {
   if (!newQuery) {
     selectedEmployee.value = null
+    selectedEmployeeTeams.value = []
   } else if (
     selectedEmployee.value &&
-    newQuery !== selectedEmployee.value.name
+    newQuery !== formatEmployeeName(selectedEmployee.value)
   ) {
     selectedEmployee.value = null
+    selectedEmployeeTeams.value = []
   }
 })
 
@@ -180,8 +200,14 @@ const skillItems = computed(() => {
   let items = [...tasks.value]
 
   if (selectedEmployee.value) {
-    const employeeTeams = selectedEmployee.value.teams 
-    items = items.filter((task) => employeeTeams.includes(task.label))
+    const employeeId = selectedEmployee.value.id
+    const teamIds = selectedEmployeeTeams.value.map(team => team.id)
+
+    items = items.filter((task) => {
+      const assignedToEmployee = (task.members || []).some(member => member.id === employeeId)
+      const assignedToTeam = (task.teams || []).some(team => teamIds.includes(team.id))
+      return assignedToEmployee || assignedToTeam
+    })
   }
 
   if (currentStatusFilters.value.length > 0) {
@@ -354,17 +380,27 @@ function handleTeamCreated(team) {
   teamListKey.value++
 }
 
-function handleEmployeeCreated(employee) {
-  // No need to refresh TeamList for employee creation alone
+async function handleEmployeeCreated() {
+  await loadEmployees()
 }
 
-function handleMemberAdded(data) {
+async function handleMemberAdded(data) {
   // Force TeamList to refresh
   teamListKey.value++
+
+  const employeeId = data?.employee?.id
+  if (!employeeId) return
+
+  invalidateEmployeeTeams(employeeId)
+
+  if (selectedEmployee.value?.id === employeeId) {
+    selectedEmployeeTeams.value = await ensureEmployeeTeams(employeeId, { forceRefresh: true })
+  }
 }
 
 onMounted(() => {
   loadAllCompetences()
+  loadEmployees()
   userStore.initialize()
 })
 </script>

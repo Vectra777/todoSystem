@@ -16,7 +16,13 @@ const generateNextTeamId = async () => {
 
 // Create a new Team
 exports.create = async (req, res) => {
-    if (!ensureAuthenticated(req, res)) return;
+    const decodedUser = ensureAuthenticated(req, res);
+    if (!decodedUser) return;
+
+    const callerCompanyId = decodedUser.company_id;
+    if (!callerCompanyId) {
+        return res.status(400).send({ message: 'Company context missing for current user.' });
+    }
     // Validate request
     if (!req.body.team_name) {
         res.status(400).send({
@@ -29,7 +35,8 @@ exports.create = async (req, res) => {
     const team = {
         id: await generateNextTeamId(),
         team_name: req.body.team_name,
-        description: req.body.description
+        description: req.body.description,
+        company_id: callerCompanyId
     };
 
     // Save Team in the database
@@ -44,11 +51,20 @@ exports.create = async (req, res) => {
 };
 
 exports.findAll = async (req, res) => {
+    const decodedUser = ensureAuthenticated(req, res);
+    if (!decodedUser) return;
+
+    const callerCompanyId = decodedUser.company_id;
+    if (!callerCompanyId) {
+        return res.status(400).send({ message: 'Company context missing for current user.' });
+    }
 
     try {
-
-        const data = await Team.findAll();
-        console.log('Teams fetched:', data.map(t => t.toJSON())); 
+        const data = await Team.findAll({
+            where: { company_id: callerCompanyId },
+            order: [['team_name', 'ASC']]
+        });
+        console.log('Teams fetched for company', callerCompanyId, ':', data.length);
         res.send(data);
     } catch (err) {
         console.error('Failed to fetch teams:', err);

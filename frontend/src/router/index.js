@@ -7,6 +7,7 @@ import RHDashboard from "../views/RHView/Dashboard.vue";
 import Profile from "../views/ProfileView/Profile.vue";
 import NotFound from "../views/404View/NotFound.vue";
 import { useUserStore } from "../stores/user";
+import { useApiStore } from "../stores/api";
 
 
 const routes = [
@@ -34,7 +35,17 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const userStore = useUserStore();
+  const apiStore = useApiStore();
   userStore.initialize();
+
+  if (userStore.token && userStore.isTokenExpired) {
+    apiStore.handleUnauthorized({ redirect: false });
+    const redirectPath = to.fullPath && to.path !== '/login' ? to.fullPath : undefined;
+    const query = redirectPath
+      ? { reason: 'sessionExpired', redirect: redirectPath }
+      : { reason: 'sessionExpired' };
+    return next({ path: '/login', query });
+  }
 
   // Check if route requires authentication
   if (to.meta?.requiresAuth) {

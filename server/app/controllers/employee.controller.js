@@ -86,20 +86,33 @@ exports.create = async (req, res) => {
 };
 
 
-// Retrieve all Employees
-exports.findAll = (req, res) => {
-    if (!ensureAuthenticated(req, res)) return;
-    Employee.findAll()
-        .then(data => {
-            const sanitized = data.map(emp => sanitizeEmployee(emp));
-            res.send(sanitized);
-        })
-        .catch(err => {
-            res.status(500).send({
-                message:
-                    err.message || "Some error occurred while retrieving employees."
-            });
+// Retrieve all Employees (scoped by company)
+exports.findAll = async (req, res) => {
+    const decodedUser = ensureAuthenticated(req, res);
+    if (!decodedUser) return;
+
+    const callerCompanyId = decodedUser.company_id;
+    if (!callerCompanyId) {
+        return res.status(400).send({ message: 'Company context missing for current user.' });
+    }
+
+    try {
+        const employees = await Employee.findAll({
+            where: { company_id: callerCompanyId },
+            order: [
+                ['lastname', 'ASC'],
+                ['firstname', 'ASC']
+            ]
         });
+
+        const sanitized = employees.map(emp => sanitizeEmployee(emp));
+        res.send(sanitized);
+    } catch (err) {
+        res.status(500).send({
+            message:
+                err.message || "Some error occurred while retrieving employees."
+        });
+    }
 }
 
 // Create a new Admin user
