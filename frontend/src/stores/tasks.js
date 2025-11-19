@@ -5,133 +5,7 @@ import { useUserStore } from "./user";
 
 const STORAGE_KEY = "todo-local-tasks";
 
-const defaultTasks = [
-  createCompetence({
-    id: 1,
-    title: "Welcome tour",
-    content: "# 🧭 Welcome Tour\n\n**Objective:** Get familiar with the internal dashboard and its key features.\n\n---\n\n## Overview\nWelcome to the [Company Name] workspace! This short onboarding task will guide you through:\n1. Navigating the dashboard\n2. Using filters and views\n3. Accessing your personal tasks and documents\n\n---\n\n## Steps\n- ✅ Open the **Dashboard** tab.\n- 🔍 Explore **Filters** (by status, department, or due date).\n- 📂 Review a few sample **tasks** to understand the structure.\n- 💬 Ask your manager if something looks unclear.\n\n---\n\n## Expected Outcome\nAfter this tour, you should be able to:\n- Navigate all key sections of the platform\n- Find documents, deadlines, and project owners quickly\n- Understand your team’s active priorities\n\n---\n\n_Once completed, mark this task as **Done** in the dashboard._",
-    progress: 25,
-    label: "Support",
-    status: "to do",
-    start_date: "2025-09-30",
-    end_date: "2025-10-15",
-    members: [{name:"Alexis",id:"e1"},{name: "Valentin",id:"e2"},{name:"Team dev",id:"t1"}]
-  }),
-
-  createCompetence({
-    id: 2,
-    title: "Draft policy update",
-    content: "# 📝 Draft: Internal Policy Update\n\n**Policy ID:** POL-2025-001  \n**Draft Date:** 28/10/2025  \n**Prepared by:** John Smith  \n**Version:** 0.1 (Draft)\n\n---\n\n## Purpose\nThis task involves drafting an updated version of the company’s **Internal HR Policy**, ensuring it complies with the new data protection laws and modern work guidelines.\n\n---\n\n## Scope\nApplies to:\n- All full-time and part-time employees\n- Contractors with access to internal systems\n- Department heads responsible for compliance\n\n---\n\n## Policy Summary\n[Company Name] commits to maintaining a fair, transparent, and compliant work environment. The new version of the policy introduces clear sections on **remote work**, **conflict of interest**, and **data security**.\n\n---\n\n## Responsibilities\n| Role | Responsibility |\n|------|----------------|\n| Employees | Follow the guidelines and report violations |\n| Managers | Monitor adherence and support staff understanding |\n| HR | Communicate updates and organize awareness sessions |\n| Compliance Officer | Validate compliance and record audit results |\n\n---\n\n## Key Updates\n1. Added detailed section on **remote work security**\n2. Clarified procedure for **incident reporting**\n3. Updated definitions of key terms\n4. Simplified approval workflow between HR and Compliance\n\n---\n\n## Procedure\n1. Draft policy updates collaboratively on shared document.  \n2. Review by HR & Compliance.  \n3. Approval by management.  \n4. Communicate updates company-wide and provide training.\n\n---\n\n## References\n- EU General Data Protection Regulation (GDPR)  \n- Internal Work-from-Home Guidelines (2023)  \n- Employee Code of Conduct\n\n---\n\n## Revision History\n| Version | Date | Author | Changes |\n|----------|------|--------|----------|\n| 0.1 | 28/10/2025 | John Smith | Initial draft |\n| 0.2 | 05/11/2025 | Mary Johnson | Added compliance section |\n\n---\n\n_**Note:** This draft is under review. Please submit feedback by 10/11/2025._",
-    progress: 60,
-    label: "Support",
-    status: "doing",
-    start_date: "2025-09-20",
-    end_date: "2025-10-10",
-    files: [
-      { name: "Rapport_annuel_2025.docx", type: "docx", id: 1 },
-      { name: "Présentation_projet.pptx", type: "pptx", id: 2 },
-      { name: "Données_budget.xlsx", type: "xlsx", id: 3 },
-      { name: "Compte_rendu.pdf", type: "pdf",  id: 4 },
-      { name: "Photo_reunion.jpg", type: "jpg", id: 5},
-    ],
-    members: [{name:"Alexis",id:"e1"},{name: "Valentin",id:"e2"},{name:"Team dev",id:"t1"}]
-  }),
-
-  createCompetence({
-    id: 3,
-    title: "Launch comms campaign",
-    content: "# 🚀 Launch Communications Campaign\n\n**Campaign ID:** COMMS-2025-004  \n**Launch Date:** 05/09/2025  \n**Owner:** Marketing Department  \n**Version:** 1.0 (Released)\n\n---\n\n## Objective\nCoordinate the internal and external communication efforts for the **Autumn Product Launch** campaign. Ensure consistent messaging across all channels.\n\n---\n\n## Channels\n- 📧 Email announcements (internal & client mailing lists)\n- 💬 Social media posts (LinkedIn, X, Instagram)\n- 📰 Press release\n- 🖥️ Intranet banner update\n\n---\n\n## Key Deliverables\n| Deliverable | Owner | Status |\n|--------------|--------|---------|\n| Campaign brief | Comms Lead | ✅ Done |\n| Design assets | Design Team | ✅ Done |\n| Internal announcement | HR | ✅ Done |\n| External press release | PR | 🚀 Live |\n\n---\n\n## Checklist\n- [x] Validate campaign message tone and visuals\n- [x] Coordinate with Sales for launch alignment\n- [x] Ensure all social media posts are scheduled\n- [ ] Monitor engagement metrics and adjust copy\n\n---\n\n## Metrics to Track\n- Email open rate (%)  \n- Click-through rate (CTR)  \n- Social engagement (likes/comments/shares)  \n- Press mentions\n\n---\n\n## Lessons Learned\nPost-launch debrief scheduled for **10/09/2025** to analyze metrics, gather feedback, and identify process improvements.\n\n---\n\n_**Status:** Campaign completed successfully — awaiting performance report._",
-    progress: 90,
-    label: "Marketing",
-    status: "finished",
-    start_date: "2025-08-15",
-    end_date: "2025-09-05",
-    files: [
-      { name: "Rapport_annuel_2025.docx", type: "docx", id: 6 },
-      { name: "Présentation_projet.pptx", type: "pptx", id: 7 },
-      { name: "Données_budget.xlsx", type: "xlsx", id: 8 },
-      { name: "Compte_rendu.pdf", type: "pdf", id: 9 },
-      { name: "Photo_reunion.jpg", type: "jpg", id: 10 },
-    ],
-  }),
-
-  createCompetence({
-    id: 4,
-    title: "Q4 Performance Reviews",
-    content: "# 📊 Q4 Performance Reviews\n\n**Review Period:** November 2025  \n**Owner:** HR Department  \n\n---\n\n## Objective\nConduct comprehensive performance reviews for all team members before year-end.\n\n---\n\n## Timeline\n- Week 1-2: Schedule individual meetings\n- Week 3-4: Conduct reviews and gather feedback\n\n---\n\n## Key Activities\n- Review individual KPIs and achievements\n- Discuss career development goals\n- Identify training needs for next quarter",
-    progress: 30,
-    label: "Support",
-    status: "doing",
-    start_date: "2025-11-01",
-    end_date: "2025-11-30",
-  }),
-
-  createCompetence({
-    id: 5,
-    title: "Holiday Season Marketing",
-    content: "# 🎄 Holiday Season Marketing Campaign\n\n**Campaign Period:** November - December 2025  \n**Owner:** Marketing Team  \n\n---\n\n## Overview\nPrepare and launch holiday-themed marketing materials across all channels.\n\n---\n\n## Deliverables\n- Email templates\n- Social media content calendar\n- Website banner updates\n- Special promotions strategy",
-    progress: 15,
-    label: "Marketing",
-    status: "to do",
-    start_date: "2025-11-05",
-    end_date: "2025-12-20",
-  }),
-
-  createCompetence({
-    id: 6,
-    title: "Security Audit",
-    content: "# 🔒 Annual Security Audit\n\n**Audit Date:** Mid-November 2025  \n**Owner:** IT Security Team  \n\n---\n\n## Scope\n- Review access controls\n- Check security protocols\n- Update security documentation\n- Test incident response procedures",
-    progress: 0,
-    label: "Devops",
-    status: "to do",
-    start_date: "2025-11-15",
-    end_date: "2025-11-15",
-  }),
-
-  createCompetence({
-    id: 7,
-    title: "New UI/UX Mockups",
-    content: "## Design new mockups for the mobile app homepage.",
-    progress: 40,
-    label: "Design",
-    status: "doing",
-    start_date: "2025-11-10",
-    end_date: "2025-11-20",
-  }),
-  
-  createCompetence({
-    id: 8,
-    title: "Regression Testing Sprint 4.2",
-    content: "## Run all regression tests for the new sprint release.",
-    progress: 80,
-    label: "QA",
-    status: "doing",
-    start_date: "2025-11-01",
-    end_date: "2025-11-05",
-  }),
-  
-  createCompetence({
-    id: 9,
-    title: "Update CI/CD Pipeline",
-    content: "## Optimize the pipeline for faster builds.",
-    progress: 10,
-    label: "Devops", 
-    status: "to do",
-    start_date: "2025-11-05",
-    end_date: "2025-11-15",
-  }),
-
-  createCompetence({
-    id: 10,
-    title: "End-to-End Test Plan",
-    content: "## Write the E2E test plan for the new auth module.",
-    progress: 0,
-    label: "QA",
-    status: "to do",
-    start_date: "2025-11-12",
-    end_date: "2025-11-20",
-  }),
-];
+const defaultTasks = [];
 
 function readStorage() {
   if (typeof window === "undefined") return [];
@@ -317,30 +191,18 @@ export const useTasksStore = defineStore("tasks", {
     saveSnapshot() {
       writeStorage(this.items);
     },
-    async moveTask({ id, toStatus }) {
+    async moveTask(competence) {
       const index = this.items.findIndex(
-        (task) => String(task.id) === String(id)
+        (task) => String(task.id) === String(competence.id)
       );
       if (index === -1) throw new Error("Task not found");
       
       const previous = { ...this.items[index] };
       
       try {
-        const apiStore = useApiStore();
-        const userStore = useUserStore();
-        
-        // If employee is moving task, update via API
-        if (userStore.id && !userStore.isHr) {
-          const backendStatus = this.mapStatusToBackend(toStatus);
-          await apiStore.updateMyTask(id, { status: backendStatus });
-          
+          await this.updateTaskUser(competence); 
           // Update local state with new status and progress
-          this.items[index].status = toStatus;
-          this.items[index].progress = this.calculateProgress(backendStatus);
-        } else {
-          // Just update local state for now (HR view)
-          this.items[index].status = toStatus;
-        }
+          this.items[index].status = competence.status;
         
         this.saveSnapshot();
         return { previous };

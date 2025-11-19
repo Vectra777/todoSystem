@@ -92,10 +92,13 @@ const loginWrapperStyle = computed(() => {
 
 async function handleMoveTask({ id, toStatus }) {
   const snapshotSource = tasks.value.find((task) => String(task.id) === String(id))
+  console.log('Moving task ID:', id, 'to status:', toStatus, 'Current task data:', snapshotSource)
   const snapshot = snapshotSource ? { ...snapshotSource } : null
+  snapshot.status = toStatus
+  console.log('Snapshot before move:', JSON.stringify(snapshot))
 
   try {
-    await tasksStore.moveTask({ id, toStatus })
+    await tasksStore.moveTask(snapshot)
   } catch (err) {
     if (snapshot) {
       tasksStore.restoreTask(id, snapshot)
