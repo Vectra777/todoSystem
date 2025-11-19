@@ -379,14 +379,42 @@ export const useApiStore = defineStore("api", {
       return this.request("/user_task");
     },
 
-    async updateMyTask(competence) {
-      console.log("updateMyTask called with:", JSON.stringify(competence));
+    async updateMyTask(competenceOrId, data = {}) {
+      let competenceId;
+      let payload = {};
 
-      const competenceId = competence.id;
-      const taskData = {
-        status: competence.status,
-        employee_review: competence.commentEmployee || "", // <- correspond au backend
-      };
+      if (typeof competenceOrId === 'object' && competenceOrId !== null) {
+        console.log("updateMyTask called with object:", JSON.stringify(competenceOrId));
+        competenceId = competenceOrId.id;
+        payload = {
+          status: competenceOrId.status,
+          employee_review:
+            competenceOrId.employee_review ??
+            competenceOrId.commentEmployee ??
+            '',
+        };
+      } else {
+        competenceId = competenceOrId;
+        payload = {
+          status: data.status,
+          employee_review:
+            data.employee_review ??
+            data.commentEmployee ??
+            '',
+        };
+      }
+
+      if (!competenceId) {
+        throw new Error('Competence ID is required to update task');
+      }
+
+      const taskData = {};
+      if (typeof payload.status !== 'undefined') {
+        taskData.status = payload.status;
+      }
+      if (typeof payload.employee_review !== 'undefined') {
+        taskData.employee_review = payload.employee_review;
+      }
 
       return this.request(`/user_task/me/${competenceId}`, {
         method: "PUT",

@@ -202,6 +202,8 @@ export const useTasksStore = defineStore("tasks", {
               status: this.mapStatus(comp.status),
               start_date: comp.start_date,
               end_date: comp.end_date,
+              commentEmployee: comp.employee_review || '',
+              commentHR: comp.hr_review || '',
             }));
 
             this.usePlaceholders = false;
@@ -241,15 +243,29 @@ export const useTasksStore = defineStore("tasks", {
 
     // Map backend status to frontend status
     mapStatus(backendStatus) {
+      if (!backendStatus) return 'to do';
+      const normalized = backendStatus
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replace(/[_-]+/g, ' ');
+
       const statusMap = {
-        'To Do': 'to do',
-        'In Progress': 'in progress',
-        'Done': 'finished',
-        'Completed': 'finished',
-        'Blocked': 'to do',
-        'Validated': 'validated'
+        'to do': 'to do',
+        'todo': 'to do',
+        'not started': 'to do',
+        'in progress': 'in progress',
+        'doing': 'in progress',
+        'progress': 'in progress',
+        'done': 'finished',
+        'finished': 'finished',
+        'completed': 'finished',
+        'validated': 'validated',
+        'approved': 'validated',
+        'blocked': 'to do'
       };
-      return statusMap[backendStatus] || 'to do';
+
+      return statusMap[normalized] || 'to do';
     },
 
     // Map frontend status to backend status
@@ -266,15 +282,29 @@ export const useTasksStore = defineStore("tasks", {
 
     // Calculate progress percentage based on status
     calculateProgress(status) {
+      if (!status) return 0;
+      const normalized = status
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replace(/[_-]+/g, ' ');
+
       const progressMap = {
-        'To Do': 0,
-        'In Progress': 50,
-        'Done': 100,
-        'Completed': 100,
-        'Blocked': 25,
-        'Validated': 100
+        'to do': 0,
+        'todo': 0,
+        'not started': 0,
+        'blocked': 25,
+        'in progress': 50,
+        'doing': 50,
+        'progress': 50,
+        'done': 100,
+        'finished': 100,
+        'completed': 100,
+        'validated': 100,
+        'approved': 100
       };
-      return progressMap[status] || 0;
+
+      return progressMap[normalized] || 0;
     },
 
     async fetchEmployeeCompetences() {
@@ -298,6 +328,8 @@ export const useTasksStore = defineStore("tasks", {
           status: this.mapStatus(comp.status),
           start_date: comp.start_date,
           end_date: comp.end_date,
+          commentEmployee: comp.employee_review || '',
+          commentHR: comp.hr_review || '',
         }));
 
         this.usePlaceholders = false;
@@ -385,6 +417,8 @@ export const useTasksStore = defineStore("tasks", {
           progress: 0,
           start_date: created.start_date,
           end_date: created.end_date,
+          commentEmployee: '',
+          commentHR: '',
           files: []
         });
         this.items.push(newTask);
@@ -427,6 +461,43 @@ export const useTasksStore = defineStore("tasks", {
           };
           // Calling updateCompetence with competenceData
           await apiStore.updateCompetence(id, competenceData);
+
+          if (Array.isArray(partial.members) && partial.members.length) {
+            const hrUpdates = partial.members
+              .filter(member => member?.id && String(member.id).startsWith('e'))
+              .map(member => {
+                const hrReview =
+                  member.hrReview ??
+                  member.hr_review ??
+                  member.commentHR;
+                const frontendStatus = member.status;
+                const backendStatus = frontendStatus
+                  ? this.mapStatusToBackend(frontendStatus)
+                  : undefined;
+
+                if (
+                  typeof hrReview === 'undefined' &&
+                  typeof backendStatus === 'undefined'
+                ) {
+                  return null;
+                }
+
+                const payload = {};
+                if (typeof hrReview !== 'undefined') {
+                  payload.hr_review = hrReview ?? '';
+                }
+                if (typeof backendStatus !== 'undefined') {
+                  payload.status = backendStatus;
+                }
+
+                return apiStore.updateTaskByHR(id, member.id, payload);
+              })
+              .filter(Boolean);
+
+            if (hrUpdates.length) {
+              await Promise.all(hrUpdates);
+            }
+          }
         }
         // If status is being updated by an employee, update the UserTask
         else if (partial.status && userStore.id) {
@@ -468,34 +539,38 @@ export const useTasksStore = defineStore("tasks", {
     },
 
     async updateTaskUser(competence) {
-        console.log('updateTaskUser called with:', JSON.stringify( competence));
-        const apiStore = useApiStore();
-        const userStore = useUserStore();
-    
-          try {
-            // Map frontend status to backend status
-            const backendStatus = this.mapStatusToBackend(competence.status);
-            // Calling updateMyTask with mapped backend status
-            await apiStore.updateMyTask(competence);
-          } catch (statusError) {
-            console.error('Failed to update task status:', statusError);
-            throw statusError;
-          }
-        
-        
-        // Update local store
-        const index = this.items.findIndex(
-          (task) => String(task.id) === String(competence.id)
-        );
-        if (index !== -1) {
-          this.items[index] = {
-            ...this.items[index],
-            ...competence,
-            id: this.items[index].id,
-          };
-          this.saveSnapshot();
-          return this.items[index];
-        }
+      console.log('updateTaskUser called with:', JSON.stringify(competence));
+      const apiStore = useApiStore();
+
+      const index = this.items.findIndex(
+        (task) => String(task.id) === String(competence.id)
+      );
+
+      const fallbackStatus = index !== -1 ? this.items[index].status : 'to do';
+      const normalizedStatus = competence.status || fallbackStatus;
+      const backendStatus = this.mapStatusToBackend(normalizedStatus);
+
+      try {
+        await apiStore.updateMyTask(competence.id, {
+          status: backendStatus,
+          employee_review: competence.commentEmployee,
+        });
+      } catch (statusError) {
+        console.error('Failed to update task status:', statusError);
+        throw statusError;
+      }
+
+      if (index !== -1) {
+        this.items[index] = {
+          ...this.items[index],
+          ...competence,
+          status: this.mapStatus(backendStatus),
+          progress: this.calculateProgress(backendStatus),
+          id: this.items[index].id,
+        };
+        this.saveSnapshot();
+        return this.items[index];
+      }
     },
 
     async deleteTask(id) {

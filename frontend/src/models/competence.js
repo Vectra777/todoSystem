@@ -10,6 +10,8 @@ export function createCompetence(data = {}) {
     start_date: data.start_date ?? null,
     end_date: data.end_date ?? null,
     status: data.status ?? 'to do',
+    commentEmployee: data.commentEmployee ?? data.employee_review ?? '',
+    commentHR: data.commentHR ?? data.hr_review ?? '',
     files: data.files ?? [],
     members: data.members ?? []
   }

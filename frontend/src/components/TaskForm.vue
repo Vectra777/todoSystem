@@ -203,6 +203,76 @@
                   </div>
                 </div>
               </div>
+
+              <div v-if="selectedEmployees.length" class="mt-4">
+                <div
+                  v-for="employee in selectedEmployees"
+                  :key="employee.id + '-collapsible'"
+                  class="border rounded-3 mb-3 overflow-hidden"
+                >
+                  <button
+                    type="button"
+                    class="w-100 text-start bg-transparent border-0 px-3 py-2 d-flex justify-content-between align-items-center"
+                    @click="toggleMemberCard(employee.id)"
+                  >
+                    <div>
+                      <div class="fw-semibold">{{ employee.name }}</div>
+                      <small class="text-muted">Status: {{ employee.status || 'to do' }}</small>
+                    </div>
+                    <i
+                      class="bi"
+                      :class="isMemberExpanded(employee.id) ? 'bi-chevron-up' : 'bi-chevron-down'"
+                    ></i>
+                  </button>
+                  <transition name="fade-collapse">
+                    <div v-if="isMemberExpanded(employee.id)" class="px-3 pb-3 bg-body-secondary">
+                      <div class="mb-2">
+                        <label class="form-label small mb-1">Employee comment</label>
+                        <p class="mb-0 small" style="white-space: pre-wrap">
+                          {{ employee.employeeReview || '—' }}
+                        </p>
+                      </div>
+                      <div>
+                        <label class="form-label small mb-1">HR comment</label>
+                        <template v-if="lookAsHR">
+                          <textarea
+                            v-model="employee.hrReview"
+                            class="form-control"
+                            rows="2"
+                            placeholder="Add an HR comment for this employee"
+                          ></textarea>
+                          <div
+                            v-if="currentMode === 'edit'"
+                            class="form-check mt-2"
+                          >
+                            <input
+                              class="form-check-input"
+                              type="checkbox"
+                              :id="employee.id + '-validated-edit'"
+                              :checked="employee.status === 'validated'"
+                              @change="toggleMemberValidation(employee, $event.target.checked)"
+                            />
+                            <label class="form-check-label" :for="employee.id + '-validated-edit'">
+                              Mark as validated
+                            </label>
+                          </div>
+                          <div
+                            v-else
+                            class="small text-muted mt-2"
+                          >
+                            Validation: <strong>{{ employee.status === 'validated' ? 'Validated' : 'Pending' }}</strong>
+                          </div>
+                        </template>
+                        <template v-else>
+                          <p class="mb-0 small" style="white-space: pre-wrap">
+                            {{ employee.hrReview || '—' }}
+                          </p>
+                        </template>
+                      </div>
+                    </div>
+                  </transition>
+                </div>
+              </div>
             </div>
           </template>
           <template v-else>
@@ -216,11 +286,64 @@
               <p v-else class="text-muted small">No teams assigned</p>
 
               <h6 class="mb-2">Employees</h6>
-              <ul v-if="selectedEmployees.length > 0" class="mb-0 list-group">
-                <li v-for="employee in selectedEmployees" :key="employee.id" class="list-group-item">
-                  <i class="bi bi-person-fill me-2 text-primary"></i>{{ employee.name }}
-                </li>
-              </ul>
+              <div v-if="selectedEmployees.length > 0" class="d-flex flex-column gap-2">
+                <div
+                  v-for="employee in selectedEmployees"
+                  :key="employee.id + '-summary'"
+                  class="border rounded-3"
+                >
+                  <button
+                    type="button"
+                    class="w-100 text-start bg-transparent border-0 px-3 py-2 d-flex justify-content-between align-items-center"
+                    @click="toggleMemberCard(employee.id)"
+                  >
+                    <div>
+                      <div class="fw-semibold d-flex align-items-center gap-2">
+                        <i class="bi bi-person-fill text-primary"></i>
+                        <span>{{ employee.name }}</span>
+                      </div>
+                      <small class="text-muted">Status: {{ employee.status || 'to do' }}</small>
+                    </div>
+                    <i
+                      class="bi"
+                      :class="isMemberExpanded(employee.id) ? 'bi-chevron-up' : 'bi-chevron-down'"
+                    ></i>
+                  </button>
+                  <transition name="fade-collapse">
+                    <div v-if="isMemberExpanded(employee.id)" class="px-3 pb-3">
+                      <div class="small">
+                        <strong>Employee:</strong>
+                        <span style="white-space: pre-wrap">{{ employee.employeeReview || '—' }}</span>
+                      </div>
+                      <div class="small mt-2">
+                        <strong>HR:</strong>
+                        <span style="white-space: pre-wrap">{{ employee.hrReview || '—' }}</span>
+                      </div>
+                      <div v-if="lookAsHR" class="mt-2">
+                        <template v-if="currentMode === 'edit'">
+                          <div class="form-check">
+                            <input
+                              class="form-check-input"
+                              type="checkbox"
+                              :id="employee.id + '-validated-view'"
+                              :checked="employee.status === 'validated'"
+                              @change="toggleMemberValidation(employee, $event.target.checked)"
+                            />
+                            <label class="form-check-label" :for="employee.id + '-validated-view'">
+                              Mark as validated
+                            </label>
+                          </div>
+                        </template>
+                        <template v-else>
+                          <small class="text-muted">
+                            Validation: <strong>{{ employee.status === 'validated' ? 'Validated' : 'Pending' }}</strong>
+                          </small>
+                        </template>
+                      </div>
+                    </div>
+                  </transition>
+                </div>
+              </div>
               <p v-else class="text-muted small">No employees assigned</p>
             </div>
             <p v-else class="mb-0 text-muted">No members or teams assigned</p>
@@ -435,6 +558,7 @@ export default {
       loadingFiles: false,
       uploading: false,
       uploadProgress: 0,
+      expandedMembers: {},
     };
   },
   async mounted() {
@@ -488,6 +612,30 @@ export default {
     toggleMode() {
       this.currentMode = this.currentMode === "view" ? "edit" : "view";
     },
+    isMemberExpanded(memberId) {
+      return Boolean(this.expandedMembers[memberId]);
+    },
+    toggleMemberCard(memberId) {
+      this.expandedMembers = {
+        ...this.expandedMembers,
+        [memberId]: !this.isMemberExpanded(memberId)
+      };
+    },
+    toggleMemberValidation(employee, isChecked) {
+      if (!this.lookAsHR) return;
+      const fallbackStatus = employee.originalStatus || 'in progress';
+      const nextStatus = isChecked ? 'validated' : fallbackStatus;
+      employee.status = nextStatus;
+      const normalizedId = String(employee.id).startsWith('e') ? employee.id : `e${employee.id}`;
+      const memberIndex = this.localTask.members.findIndex((m) => m.id === normalizedId);
+      if (memberIndex !== -1) {
+        const updatedMember = {
+          ...this.localTask.members[memberIndex],
+          status: nextStatus,
+        };
+        this.localTask.members.splice(memberIndex, 1, updatedMember);
+      }
+    },
     async loadTeamsAndEmployees() {
       const apiStore = useApiStore();
       
@@ -524,9 +672,25 @@ export default {
         this.localTask.members = [];
       }
       // Check if member is already added
-      const exists = this.localTask.members.some(m => m.id === member.id);
+      const normalizedId = String(member.id).startsWith('e') || String(member.id).startsWith('t')
+        ? member.id
+        : `e${member.id}`;
+      const exists = this.localTask.members.some(m => m.id === normalizedId);
       if (!exists) {
-        this.localTask.members.push({ ...member });
+        const normalizedStatus = member.status || 'to do';
+        const normalizedMember = {
+          employeeReview: '',
+          hrReview: '',
+          originalStatus: normalizedStatus,
+          status: normalizedStatus,
+          ...member,
+          id: normalizedId,
+        };
+        this.localTask.members.push(normalizedMember);
+        this.expandedMembers = {
+          ...this.expandedMembers,
+          [normalizedMember.id]: true,
+        };
       }
       // Clear search and hide results
       if (String(member.id).startsWith('t')) {
@@ -584,11 +748,18 @@ export default {
       
       // Add employees from the members array
       if (Array.isArray(task.members)) {
-        members = task.members.map(emp => ({
-          id: String(emp.id).startsWith('e') ? emp.id : `e${emp.id}`, // Ensure ID starts with 'e'
-          name: emp.firstname && emp.lastname ? `${emp.firstname} ${emp.lastname}` : emp.name || emp.id,
-          status: emp.status
-        }));
+        members = task.members.map(emp => {
+          const normalizedId = String(emp.id).startsWith('e') ? emp.id : `e${emp.id}`;
+          const normalizedStatus = emp.status || 'to do';
+          return {
+            id: normalizedId,
+            name: emp.firstname && emp.lastname ? `${emp.firstname} ${emp.lastname}` : emp.name || emp.id,
+            status: normalizedStatus,
+            originalStatus: normalizedStatus,
+            employeeReview: emp.employee_review ?? emp.employeeReview ?? emp.commentEmployee ?? '',
+            hrReview: emp.hr_review ?? emp.hrReview ?? emp.commentHR ?? ''
+          };
+        });
       }
       
       // Add teams from the teams array
@@ -602,6 +773,8 @@ export default {
       
       const copy = {
         ...task,
+        commentEmployee: task.commentEmployee || task.employee_review || '',
+        commentHR: task.commentHR || task.hr_review || '',
         files: Array.isArray(task.files) ? [...task.files] : [],
         members: members,
       };
@@ -748,6 +921,21 @@ export default {
   watch: {
     task(newTask) {
       this.localTask = this.normalizeTask(newTask);
+      this.expandedMembers = {};
+    },
+    'localTask.members': {
+      handler(newMembers) {
+        if (!Array.isArray(newMembers)) {
+          this.expandedMembers = {};
+          return;
+        }
+        const nextState = {};
+        newMembers.forEach(member => {
+          nextState[member.id] = this.expandedMembers[member.id] ?? false;
+        });
+        this.expandedMembers = nextState;
+      },
+      deep: true,
     },
   },
 };
@@ -768,5 +956,14 @@ export default {
 }
 .hover-bg-light:hover {
   background-color: #f8f9fa;
+}
+.fade-collapse-enter-active,
+.fade-collapse-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-collapse-enter-from,
+.fade-collapse-leave-to {
+  opacity: 0;
 }
 </style>
