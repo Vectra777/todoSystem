@@ -44,15 +44,31 @@
             ></span>
           </li>
 
-          <!-- Account button -->
+          <!-- Account/Logout button -->
           <li class="nav-item ms-lg-3 justify-content-center d-flex">
             <router-link 
+              v-if="!userStore.isAuthenticated"
               to="/login" 
               class="btn btn-outline-primary align-items-center px-3 py-1 w-100 w-lg-auto mt-2 mt-lg-0"
               active-class="active"
             >
               <i class="bi bi-person-circle me-1"></i> My Account
             </router-link>
+            <div v-else class="d-flex gap-2 w-100 w-lg-auto mt-2 mt-lg-0">
+              <router-link 
+                to="/profile" 
+                class="btn btn-outline-primary align-items-center px-3 py-1 flex-grow-1 flex-lg-grow-0"
+              >
+                <i class="bi bi-person-circle me-1"></i> {{ userStore.displayName }}
+              </router-link>
+              <button
+                @click="handleLogout"
+                class="btn btn-outline-danger align-items-center px-3 py-1"
+                title="Logout"
+              >
+                <i class="bi bi-box-arrow-right"></i>
+              </button>
+            </div>
           </li>
 
           <!-- Dark mode toggle -->
@@ -79,6 +95,7 @@ import { mapStores } from 'pinia';
 import logo from '../assets/logo.png';
 import { useThemeStore } from '../stores/theme';
 import { useUserStore } from '../stores/user';
+import { useApiStore } from '../stores/api';
 
 export default {
   name: 'Header',
@@ -88,9 +105,11 @@ export default {
       staticLinks: [
         { name: "Home", path: "/" },
         { name: "About", path: "/about" },
+      ],
+      authLinks: [
         { name: "My Dashboard", path: "/dashboard" },
       ],
-      adminLinks: [
+      hrLinks: [
         { name: "HR Dashboard", path: "/hr" }
       ]
     };
@@ -98,9 +117,18 @@ export default {
   computed: {
     ...mapStores(useThemeStore, useUserStore),
     navLinks() {
-      return this.userStore.isAdmin
-        ? [...this.staticLinks, ...this.adminLinks]
-        : [...this.staticLinks];
+      if (!this.userStore.isAuthenticated) {
+        return this.staticLinks;
+      }
+      
+      const links = [...this.staticLinks, ...this.authLinks];
+      const isHR = ['hr', 'rh', 'admin'].includes((this.userStore.role || '').toLowerCase());
+      
+      if (isHR) {
+        return [...links, ...this.hrLinks];
+      }
+      
+      return links;
     },
     isDark() {
       return this.themeStore.isDark;
@@ -115,6 +143,17 @@ export default {
   methods: {
     toggleDarkMode() {
       this.themeStore.toggleTheme();
+    },
+    async handleLogout() {
+      const apiStore = useApiStore();
+      try {
+        await apiStore.logout();
+      } catch (error) {
+        console.error('Logout error:', error);
+      } finally {
+        // Always redirect to home page after logout
+        this.$router.push('/');
+      }
     }
   }
 };

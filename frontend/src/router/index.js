@@ -7,15 +7,17 @@ import RHDashboard from "../views/RHView/Dashboard.vue";
 import Profile from "../views/ProfileView/Profile.vue";
 import NotFound from "../views/404View/NotFound.vue";
 import { useUserStore } from "../stores/user";
+import { useApiStore } from "../stores/api";
 
 
 const routes = [
   { path: "/", component: Home },
+  { path: "/home", redirect: "/" },
   { path: "/login", component: Login },
   { path: "/about", component: About },
-  { path: "/dashboard", component: Dashboard },
-  { path: "/hr", component: RHDashboard, meta: { requiresAdmin: true } },
-  { path: "/profile", component: Profile },
+  { path: "/dashboard", component: Dashboard, meta: { requiresAuth: true } },
+  { path: "/hr", component: RHDashboard, meta: { requiresAuth: true, requiresHR: true } },
+  { path: "/profile", component: Profile, meta: { requiresAuth: true } },
   { path: '/:pathMatch(.*)*', name: '404', component: NotFound }
 ];
 
@@ -32,18 +34,41 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
-  if (!to.meta?.requiresAdmin) {
-    return next();
-  }
-
   const userStore = useUserStore();
+  const apiStore = useApiStore();
   userStore.initialize();
 
-  if (userStore.isAdmin) {
-    return next();
+  if (userStore.token && userStore.isTokenExpired) {
+    apiStore.handleUnauthorized({ redirect: false });
+    const redirectPath = to.fullPath && to.path !== '/login' ? to.fullPath : undefined;
+    const query = redirectPath
+      ? { reason: 'sessionExpired', redirect: redirectPath }
+      : { reason: 'sessionExpired' };
+    return next({ path: '/login', query });
   }
 
-  next({ path: "/dashboard" });
+  // Check if route requires authentication
+  if (to.meta?.requiresAuth) {
+    if (!userStore.isAuthenticated) {
+      // Redirect to login if not authenticated
+      return next({ path: "/login", query: { redirect: to.fullPath } });
+    }
+
+    // Check if route requires HR role
+    if (to.meta?.requiresHR) {
+      const isHR = ['hr', 'rh', 'admin'].includes((userStore.role || '').toLowerCase());
+      if (!isHR) {
+        return next({ path: "/dashboard" });
+      }
+    }
+  }
+
+  // If authenticated user tries to access login, redirect to dashboard
+  if (to.path === '/login' && userStore.isAuthenticated) {
+    return next({ path: "/dashboard" });
+  }
+
+  next();
 });
 
 export default router;

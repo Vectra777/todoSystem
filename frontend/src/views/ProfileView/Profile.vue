@@ -38,17 +38,18 @@
         <div class="card shadow-sm">
           <div class="card-header text-center fw-semibold">My Teams</div>
           <div class="list-group list-group-flush">
-            <div v-if="teams.length === 0" class="list-group-item text-muted text-center">
+            <div v-if="teamsLoading" class="list-group-item text-center">
+              <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+              Loading teams...
+            </div>
+            <div v-else-if="teams.length === 0" class="list-group-item text-muted text-center">
               No teams yet
             </div>
-            <div v-for="team in teams" :key="team.id" class="list-group-item">
+            <div v-else v-for="team in teams" :key="team.id" class="list-group-item">
               <div class="row align-items-center">
-                <div class="col-6 col-md-4 fw-medium">{{ team.name }}</div>
-                <div class="col-3 col-md-4 text-md-center text-muted">
-                  {{ team.employees }} employees
-                </div>
-                <div class="col-3 col-md-4 text-md-end text-muted">
-                  {{ team.competences }} competences
+                <div class="col-12 col-md-6 fw-medium">{{ team.name }}</div>
+                <div class="col-12 col-md-6 text-md-end text-muted">
+                  <small v-if="team.description">{{ team.description }}</small>
                 </div>
               </div>
             </div>
@@ -58,20 +59,93 @@
     </main>
 
     <Footer class= "bg-body"/>
+
+    <!-- Password Reset Modal -->
+    <div v-if="showPasswordModal" class="modal-overlay" @click.self="closePasswordModal">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Reset Password</h5>
+            <button type="button" class="btn-close" @click="closePasswordModal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <!-- Alert for errors/success -->
+            <div v-if="passwordMessage" :class="['alert', passwordMessageType === 'success' ? 'alert-success' : 'alert-danger', 'alert-dismissible', 'fade', 'show']" role="alert">
+              {{ passwordMessage }}
+              <button type="button" class="btn-close" @click="passwordMessage = ''" aria-label="Close"></button>
+            </div>
+
+            <form @submit.prevent="handlePasswordReset">
+              <!-- Current Password -->
+              <div class="mb-3">
+                <label for="currentPassword" class="form-label">Current Password</label>
+                <input
+                  type="password"
+                  class="form-control"
+                  id="currentPassword"
+                  v-model.trim="passwordForm.currentPassword"
+                  required
+                  placeholder="Enter your current password"
+                />
+              </div>
+
+              <!-- New Password -->
+              <div class="mb-3">
+                <label for="newPassword" class="form-label">New Password</label>
+                <input
+                  type="password"
+                  class="form-control"
+                  id="newPassword"
+                  v-model.trim="passwordForm.newPassword"
+                  required
+                  minlength="6"
+                  placeholder="Enter new password (min 6 characters)"
+                />
+              </div>
+
+              <!-- Confirm New Password -->
+              <div class="mb-3">
+                <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                <input
+                  type="password"
+                  class="form-control"
+                  id="confirmPassword"
+                  v-model.trim="passwordForm.confirmPassword"
+                  required
+                  minlength="6"
+                  placeholder="Confirm new password"
+                />
+              </div>
+
+              <div class="d-flex gap-2 justify-content-end">
+                <button type="button" class="btn btn-secondary" @click="closePasswordModal">Cancel</button>
+                <button type="submit" class="btn btn-primary" :disabled="passwordLoading">
+                  <span v-if="passwordLoading" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                  {{ passwordLoading ? 'Updating...' : 'Update Password' }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { mapStores } from 'pinia'
 import Header from '../../components/Header.vue'
 import Footer from '../../components/Footer.vue'
 import { useThemeStore } from '../../stores/theme'
 import { useUserStore } from '../../stores/user'
+import { useApiStore } from '../../stores/api'
+import router from '../../router'
 
 // stores
 const themeStore = useThemeStore()
 const userStore = useUserStore()
+const apiStore = useApiStore()
 
 // reactive/computed user data
 const fullName = computed(() => userStore.displayName || 'Guest User')
@@ -90,17 +164,129 @@ const initials = computed(() => {
 
 const avatarBg = computed(() => '#59c4ad') // pleasant teal similar to screenshot
 
-// teams come from the user store
-const teams = computed(() => userStore.teams || [])
+// Teams data
+const teams = ref([])
+const teamsLoading = ref(false)
+
+// Load teams on mount
+onMounted(async () => {
+  if (userStore.id) {
+    teamsLoading.value = true
+    try {
+      const fetchedTeams = await apiStore.getTeamsByEmployee(userStore.id)
+      teams.value = fetchedTeams.map(team => ({
+        id: team.id,
+        name: team.name,
+        description: team.description,
+        employees: 0, // Will be populated if needed
+        competences: 0 // Will be populated if needed
+      }))
+      // Also update user store with teams
+      userStore.setTeams(teams.value)
+    } catch (error) {
+      console.error('Failed to fetch teams:', error)
+      // Fall back to teams from user store if any
+      teams.value = userStore.teams || []
+    } finally {
+      teamsLoading.value = false
+    }
+  }
+})
+
+// Password reset modal
+const showPasswordModal = ref(false)
+const passwordForm = ref({
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: ''
+})
+const passwordLoading = ref(false)
+const passwordMessage = ref('')
+const passwordMessageType = ref('success')
 
 // actions
 function onResetPassword() {
-  // Placeholder: wire to real flow
-  alert('Password reset flow coming soon.')
+  showPasswordModal.value = true
+  passwordMessage.value = ''
+  passwordForm.value = {
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  }
 }
 
-function onLogout() {
-  userStore.clearUser()
+function closePasswordModal() {
+  showPasswordModal.value = false
+  passwordMessage.value = ''
+  passwordForm.value = {
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  }
+}
+
+async function handlePasswordReset() {
+  passwordMessage.value = ''
+
+  // Validation
+  if (!passwordForm.value.currentPassword) {
+    passwordMessage.value = 'Please enter your current password'
+    passwordMessageType.value = 'error'
+    return
+  }
+
+  if (passwordForm.value.newPassword.length < 6) {
+    passwordMessage.value = 'New password must be at least 6 characters'
+    passwordMessageType.value = 'error'
+    return
+  }
+
+  if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
+    passwordMessage.value = 'New passwords do not match'
+    passwordMessageType.value = 'error'
+    return
+  }
+
+  if (passwordForm.value.currentPassword === passwordForm.value.newPassword) {
+    passwordMessage.value = 'New password must be different from current password'
+    passwordMessageType.value = 'error'
+    return
+  }
+
+  passwordLoading.value = true
+
+  try {
+    await apiStore.changePassword(
+      passwordForm.value.currentPassword,
+      passwordForm.value.newPassword
+    )
+    
+    passwordMessage.value = 'Password updated successfully!'
+    passwordMessageType.value = 'success'
+    
+    // Close modal after 2 seconds
+    setTimeout(() => {
+      closePasswordModal()
+    }, 2000)
+  } catch (error) {
+    console.error('Password reset error:', error)
+    passwordMessage.value = error.message || 'Failed to update password'
+    passwordMessageType.value = 'error'
+  } finally {
+    passwordLoading.value = false
+  }
+}
+
+async function onLogout() {
+  try {
+    await apiStore.logout()
+  } catch (error) {
+    console.error('Logout error:', error)
+    userStore.clearUser()
+  } finally {
+    // Always redirect to home page after logout
+    router.push('/')
+  }
 }
 
 // theme helper
@@ -131,5 +317,88 @@ const isDark = computed(() => themeStore.isDark)
   font-size: 32px;
   font-weight: 700;
   letter-spacing: 1px;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+  backdrop-filter: blur(4px);
+}
+
+.modal-dialog {
+  max-width: 500px;
+  width: 90%;
+  margin: 1.75rem auto;
+}
+
+.modal-content {
+  background-color: #fff;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dark-mode .modal-content {
+  background-color: #2b2b2b;
+  color: #eaeaea;
+}
+
+.modal-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #dee2e6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dark-mode .modal-header {
+  border-bottom-color: #444;
+}
+
+.modal-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.btn-close {
+  background: transparent url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23000'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z'/%3e%3c/svg%3e") center/1em auto no-repeat;
+  border: 0;
+  padding: 0.25rem;
+  width: 1em;
+  height: 1em;
+  opacity: 0.5;
+  cursor: pointer;
+}
+
+.btn-close:hover {
+  opacity: 0.75;
+}
+
+.dark-mode .btn-close {
+  filter: invert(1);
 }
 </style>

@@ -1,47 +1,49 @@
 <template>
-  <Header />
-  <div class="login-wrapper d-flex flex-column min-vh-100" :class="{ 'dark-mode': isDark }">
-    <div class="flex-grow-1 d-flex justify-content-center align-items-center px-3">
-      <div class="card login-card p-4 text-center" 
-           :style="{
-             backgroundColor: isDark ? '#424242' : 'rgba(255, 255, 255, 0.95)',
-             color: isDark ? '#f1f1f1' : '#212529'
-           }">
-        <h2 class="mb-4">Login</h2>
+  <div>
+    <Header />
+    <div class="login-wrapper d-flex flex-column min-vh-100" :class="{ 'dark-mode': isDark }">
+      <div class="flex-grow-1 d-flex justify-content-center align-items-center px-3">
+        <div class="card login-card p-4 text-center" 
+             :style="{
+               backgroundColor: isDark ? '#424242' : 'rgba(255, 255, 255, 0.95)',
+               color: isDark ? '#f1f1f1' : '#212529'
+             }">
+          <h2 class="mb-4">Login</h2>
 
-        <!-- Bootstrap alert -->
-        <div v-if="errorMessage" class="alert alert-danger alert-dismissible fade show" role="alert">
-          {{ errorMessage }}
-          <button type="button" class="btn-close" aria-label="Close" @click="errorMessage = ''"></button>
+          <!-- Bootstrap alert -->
+          <div v-if="errorMessage" class="alert alert-danger alert-dismissible fade show" role="alert">
+            {{ errorMessage }}
+            <button type="button" class="btn-close" aria-label="Close" @click="errorMessage = ''"></button>
+          </div>
+
+          <form @submit.prevent="login">
+            <!-- Email -->
+            <div class="mb-3 text-start">
+              <label for="email" class="form-label" :style="{ color: isDark ? '#e0e0e0' : '#212529' }">Email</label>
+              <input type="email" id="email" v-model.trim="email" class="form-control"
+                     placeholder="Enter your email"
+                     :class="{ 'dark-input': isDark }" />
+            </div>
+
+            <!-- Password -->
+            <div class="mb-3 text-start">
+              <label for="password" class="form-label" :style="{ color: isDark ? '#e0e0e0' : '#212529' }">Password</label>
+              <input type="password" id="password" v-model.trim="password" class="form-control"
+                     placeholder="Enter your password"
+                     :class="{ 'dark-input': isDark }" />
+            </div>
+
+            <!-- Submit -->
+            <button type="submit" class="btn btn-primary w-100 py-2" :disabled="loading">
+              <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status"></span>
+              Log in
+            </button>
+          </form>
         </div>
-
-        <form @submit.prevent="login">
-          <!-- Email -->
-          <div class="mb-3 text-start">
-            <label for="email" class="form-label" :style="{ color: isDark ? '#e0e0e0' : '#212529' }">Email</label>
-            <input type="email" id="email" v-model.trim="email" class="form-control"
-                   placeholder="Enter your email"
-                   :class="{ 'dark-input': isDark }" />
-          </div>
-
-          <!-- Password -->
-          <div class="mb-3 text-start">
-            <label for="password" class="form-label" :style="{ color: isDark ? '#e0e0e0' : '#212529' }">Password</label>
-            <input type="password" id="password" v-model.trim="password" class="form-control"
-                   placeholder="Enter your password"
-                   :class="{ 'dark-input': isDark }" />
-          </div>
-
-          <!-- Submit -->
-          <button type="submit" class="btn btn-primary w-100 py-2" :disabled="loading">
-            <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status"></span>
-            Log in
-          </button>
-        </form>
       </div>
     </div>
+    <Footer />
   </div>
-  <Footer />
 </template>
 
 <script>
@@ -50,6 +52,7 @@ import router from "../../router";
 import Header from "../../components/Header.vue";
 import Footer from "../../components/Footer.vue";
 import { useThemeStore } from "../../stores/theme";
+import { useApiStore } from "../../stores/api";
 import { mapStores } from "pinia";
 
 export default {
@@ -60,6 +63,7 @@ export default {
     const password = ref("");
     const loading = ref(false);
     const errorMessage = ref("");
+    const apiStore = useApiStore();
 
     async function login() {
       errorMessage.value = "";
@@ -71,7 +75,8 @@ export default {
 
       loading.value = true;
       try {
-        router.push("/home");
+        await apiStore.login(email.value, password.value);
+        router.push("/dashboard");
       } catch (err) {
         console.error(err);
         errorMessage.value = err?.message || "An error occurred during login.";

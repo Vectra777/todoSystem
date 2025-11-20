@@ -4,7 +4,6 @@
     class="position-fixed top-0 end-0 border-start p-4 bg-body-tertiary shadow"
     style="width: 500px; height: 100vh; z-index: 200000; overflow-y: auto"
   >
-    <!-- Header -->
     <h5 class="d-flex align-items-center justify-content-between mb-4">
       <span>{{ task.title }} task</span>
       <div>
@@ -24,11 +23,9 @@
       </div>
     </h5>
 
-    <!-- General Information -->
     <div class="card mb-4">
       <div class="card-header fw-semibold">General Information</div>
       <div class="card-body">
-        <!-- Title -->
         <div class="mb-3">
           <label class="form-label">Title</label>
           <template v-if="currentMode === 'edit' && mainView">
@@ -44,7 +41,6 @@
           </template>
         </div>
 
-        <!-- Description -->
         <div class="mb-3">
           <label class="form-label">Description</label>
           <template v-if="currentMode === 'edit' && mainView">
@@ -64,7 +60,6 @@
           </template>
         </div>
 
-        <!-- Label -->
         <div class="mb-3">
           <label class="form-label">Label</label>
           <template v-if="currentMode === 'edit' && mainView">
@@ -80,16 +75,15 @@
           </template>
         </div>
 
-        <!-- Status -->
-        <div class="mb-3">
+        <div class="mb-3" v-if="!mainView">
           <label class="form-label">Status</label>
           <template v-if="currentMode === 'edit' && !mainView">
             <select v-model="localTask.status" class="form-select" required>
               <option disabled value="">Select a status</option>
-              <option>to do</option>
-              <option>doing</option>
-              <option>finished</option>
-              <option v-if="lookAsHR">validated</option>
+              <option value="to do">To Do</option>
+              <option value="in progress">In Progress</option>
+              <option value="finished">Finished</option>
+              <option v-if="lookAsHR" value="validated">Validated</option>
             </select>
           </template>
           <template v-else>
@@ -98,17 +92,14 @@
         </div>
       </div>
     </div>
-    <!-- Add member or team -->
-    <div class="card mb-4">
+    <div class="card mb-4" v-if="mainView">
       <div class="card-header fw-semibold">Members</div>
       <div class="card-body">
         <div class="mb-3">
           <template v-if="currentMode === 'edit' && mainView">
-            <!-- Teams Section -->
             <div class="mb-4">
               <label class="form-label">Teams</label>
               
-              <!-- Selected Teams -->
               <div v-if="selectedTeams.length > 0" class="mb-2 d-flex flex-wrap gap-2">
                 <span 
                   v-for="team in selectedTeams" 
@@ -127,7 +118,6 @@
                 </span>
               </div>
 
-              <!-- Team Search Bar -->
               <div class="position-relative">
                 <input 
                   type="text"
@@ -136,13 +126,19 @@
                   @blur="hideTeamResultsDelayed"
                   class="form-control"
                   placeholder="Search teams..."
+                  :disabled="loadingTeams"
                 />
                 <div 
-                  v-if="showTeamResults && filteredTeams.length > 0"
+                  v-if="showTeamResults && (loadingTeams || filteredTeams.length > 0)"
                   class="position-absolute w-100 mt-1 bg-white border rounded shadow-sm"
                   style="max-height: 200px; overflow-y: auto; z-index: 1000;"
                 >
+                  <div v-if="loadingTeams" class="p-2 text-center text-muted">
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                    Loading teams...
+                  </div>
                   <div 
+                    v-else
                     v-for="team in filteredTeams" 
                     :key="team.id"
                     class="p-2 hover-bg-light"
@@ -155,11 +151,9 @@
               </div>
             </div>
 
-            <!-- Employees Section -->
             <div>
               <label class="form-label">Employees</label>
               
-              <!-- Selected Employees -->
               <div v-if="selectedEmployees.length > 0" class="mb-2 d-flex flex-wrap gap-2">
                 <span 
                   v-for="employee in selectedEmployees" 
@@ -178,7 +172,6 @@
                 </span>
               </div>
 
-              <!-- Employee Search Bar -->
               <div class="position-relative">
                 <input 
                   type="text"
@@ -187,13 +180,19 @@
                   @blur="hideEmployeeResultsDelayed"
                   class="form-control"
                   placeholder="Search employees..."
+                  :disabled="loadingEmployees"
                 />
                 <div 
-                  v-if="showEmployeeResults && filteredEmployees.length > 0"
+                  v-if="showEmployeeResults && (loadingEmployees || filteredEmployees.length > 0)"
                   class="position-absolute w-100 mt-1 bg-white border rounded shadow-sm"
                   style="max-height: 200px; overflow-y: auto; z-index: 1000;"
                 >
+                  <div v-if="loadingEmployees" class="p-2 text-center text-muted">
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                    Loading employees...
+                  </div>
                   <div 
+                    v-else
                     v-for="employee in filteredEmployees" 
                     :key="employee.id"
                     class="p-2 hover-bg-light"
@@ -202,6 +201,76 @@
                   >
                     <i class="bi bi-person-fill me-2 text-primary"></i>{{ employee.name }}
                   </div>
+                </div>
+              </div>
+
+              <div v-if="selectedEmployees.length" class="mt-4">
+                <div
+                  v-for="employee in selectedEmployees"
+                  :key="employee.id + '-collapsible'"
+                  class="border rounded-3 mb-3 overflow-hidden"
+                >
+                  <button
+                    type="button"
+                    class="w-100 text-start bg-transparent border-0 px-3 py-2 d-flex justify-content-between align-items-center"
+                    @click="toggleMemberCard(employee.id)"
+                  >
+                    <div>
+                      <div class="fw-semibold">{{ employee.name }}</div>
+                      <small class="text-muted">Status: {{ employee.status || 'to do' }}</small>
+                    </div>
+                    <i
+                      class="bi"
+                      :class="isMemberExpanded(employee.id) ? 'bi-chevron-up' : 'bi-chevron-down'"
+                    ></i>
+                  </button>
+                  <transition name="fade-collapse">
+                    <div v-if="isMemberExpanded(employee.id)" class="px-3 pb-3 bg-body-secondary">
+                      <div class="mb-2">
+                        <label class="form-label small mb-1">Employee comment</label>
+                        <p class="mb-0 small" style="white-space: pre-wrap">
+                          {{ employee.employeeReview || '—' }}
+                        </p>
+                      </div>
+                      <div>
+                        <label class="form-label small mb-1">HR comment</label>
+                        <template v-if="lookAsHR">
+                          <textarea
+                            v-model="employee.hrReview"
+                            class="form-control"
+                            rows="2"
+                            placeholder="Add an HR comment for this employee"
+                          ></textarea>
+                          <div
+                            v-if="currentMode === 'edit'"
+                            class="form-check mt-2"
+                          >
+                            <input
+                              class="form-check-input"
+                              type="checkbox"
+                              :id="employee.id + '-validated-edit'"
+                              :checked="employee.status === 'validated'"
+                              @change="toggleMemberValidation(employee, $event.target.checked)"
+                            />
+                            <label class="form-check-label" :for="employee.id + '-validated-edit'">
+                              Mark as validated
+                            </label>
+                          </div>
+                          <div
+                            v-else
+                            class="small text-muted mt-2"
+                          >
+                            Validation: <strong>{{ employee.status === 'validated' ? 'Validated' : 'Pending' }}</strong>
+                          </div>
+                        </template>
+                        <template v-else>
+                          <p class="mb-0 small" style="white-space: pre-wrap">
+                            {{ employee.hrReview || '—' }}
+                          </p>
+                        </template>
+                      </div>
+                    </div>
+                  </transition>
                 </div>
               </div>
             </div>
@@ -217,11 +286,64 @@
               <p v-else class="text-muted small">No teams assigned</p>
 
               <h6 class="mb-2">Employees</h6>
-              <ul v-if="selectedEmployees.length > 0" class="mb-0 list-group">
-                <li v-for="employee in selectedEmployees" :key="employee.id" class="list-group-item">
-                  <i class="bi bi-person-fill me-2 text-primary"></i>{{ employee.name }}
-                </li>
-              </ul>
+              <div v-if="selectedEmployees.length > 0" class="d-flex flex-column gap-2">
+                <div
+                  v-for="employee in selectedEmployees"
+                  :key="employee.id + '-summary'"
+                  class="border rounded-3"
+                >
+                  <button
+                    type="button"
+                    class="w-100 text-start bg-transparent border-0 px-3 py-2 d-flex justify-content-between align-items-center"
+                    @click="toggleMemberCard(employee.id)"
+                  >
+                    <div>
+                      <div class="fw-semibold d-flex align-items-center gap-2">
+                        <i class="bi bi-person-fill text-primary"></i>
+                        <span>{{ employee.name }}</span>
+                      </div>
+                      <small class="text-muted">Status: {{ employee.status || 'to do' }}</small>
+                    </div>
+                    <i
+                      class="bi"
+                      :class="isMemberExpanded(employee.id) ? 'bi-chevron-up' : 'bi-chevron-down'"
+                    ></i>
+                  </button>
+                  <transition name="fade-collapse">
+                    <div v-if="isMemberExpanded(employee.id)" class="px-3 pb-3">
+                      <div class="small">
+                        <strong>Employee:</strong>
+                        <span style="white-space: pre-wrap">{{ employee.employeeReview || '—' }}</span>
+                      </div>
+                      <div class="small mt-2">
+                        <strong>HR:</strong>
+                        <span style="white-space: pre-wrap">{{ employee.hrReview || '—' }}</span>
+                      </div>
+                      <div v-if="lookAsHR" class="mt-2">
+                        <template v-if="currentMode === 'edit'">
+                          <div class="form-check">
+                            <input
+                              class="form-check-input"
+                              type="checkbox"
+                              :id="employee.id + '-validated-view'"
+                              :checked="employee.status === 'validated'"
+                              @change="toggleMemberValidation(employee, $event.target.checked)"
+                            />
+                            <label class="form-check-label" :for="employee.id + '-validated-view'">
+                              Mark as validated
+                            </label>
+                          </div>
+                        </template>
+                        <template v-else>
+                          <small class="text-muted">
+                            Validation: <strong>{{ employee.status === 'validated' ? 'Validated' : 'Pending' }}</strong>
+                          </small>
+                        </template>
+                      </div>
+                    </div>
+                  </transition>
+                </div>
+              </div>
               <p v-else class="text-muted small">No employees assigned</p>
             </div>
             <p v-else class="mb-0 text-muted">No members or teams assigned</p>
@@ -229,7 +351,6 @@
         </div>
       </div>
     </div>
-    <!-- Dates -->
     <div class="card mb-4">
       <div class="card-header fw-semibold">Dates</div>
       <div class="card-body">
@@ -263,7 +384,6 @@
       </div>
     </div>
 
-    <!-- Comments -->
     <div class="card mb-4" v-if="!mainView">
       <div class="card-header fw-semibold">Comments</div>
       <div class="card-body">
@@ -303,7 +423,6 @@
       </div>
     </div>
 
-    <!-- Files -->
     <div class="card mb-4">
       <div class="card-header fw-semibold">Attached Files</div>
       <div class="card-body">
@@ -312,48 +431,81 @@
             <label class="form-label">Add files</label>
             <input
               type="file"
+              ref="fileInput"
               class="form-control"
               @change="onFilesSelected"
               multiple
             />
-            <small class="text-muted">You can add multiple files.</small>
+            <small class="text-muted">Max 20 MB per file. Allowed: images, PDF, Office docs, text, zip.</small>
+          </div>
+          <div v-if="uploading" class="alert alert-info">
+            Uploading... {{ uploadProgress }}%
           </div>
         </template>
 
         <div
-          v-if="!localTask.files || localTask.files.length === 0"
+          v-if="(!localTask.files || localTask.files.length === 0) && !loadingFiles"
           class="text-muted text-center py-3"
         >
           No files attached
         </div>
+        <div v-if="loadingFiles" class="text-center py-3">
+          <div class="spinner-border spinner-border-sm" role="status"></div>
+          <span class="ms-2">Loading files...</span>
+        </div>
         <ul
-          v-else
+          v-else-if="localTask.files && localTask.files.length > 0"
           class="list-group"
           style="max-height: 200px; overflow-y: auto"
         >
           <li
-            v-for="(file, index) in localTask.files"
-            :key="file.id || file.name || index"
-            class="list-group-item d-flex align-items-center"
+            v-for="file in localTask.files"
+            :key="file.id"
+            class="list-group-item d-flex align-items-center justify-content-between"
           >
-            <i :class="fileIcon(file.type) + ' fs-4 me-2'"></i>
-            <span class="me-2">{{ file.name }}</span>
-            <button
-              v-if="currentMode === 'edit' && mainView"
-              type="button"
-              class="btn btn-sm btn-outline-danger ms-auto"
-              @click="removeFile(file)"
-              aria-label="Remove file"
-            >
-              <i class="bi bi-trash"></i>
-            </button>
+            <div class="d-flex align-items-center">
+              <i :class="fileIconByMime(file.mime_type) + ' fs-4 me-2'"></i>
+              <div>
+                <div>{{ file.original_name || file.name }}</div>
+                <small class="text-muted">{{ formatFileSize(file.size) }}</small>
+              </div>
+            </div>
+            <div>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-primary me-1"
+                @click="downloadFile(file)"
+                title="Download"
+              >
+                <i class="bi bi-download"></i>
+              </button>
+              <button
+                v-if="currentMode === 'edit' && mainView"
+                type="button"
+                class="btn btn-sm btn-outline-danger"
+                @click="deleteFile(file)"
+                title="Delete"
+              >
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
           </li>
         </ul>
       </div>
     </div>
 
-    <!-- Actions -->
-    <div class="d-flex justify-content-end mt-4 mb-3">
+    <div class="d-flex justify-content-between mt-4 mb-3">
+      <div>
+        <button
+          v-if="lookAsHR && mainView && task.id"
+          class="btn btn-danger"
+          type="button"
+          @click="handleDelete"
+        >
+          <i class="bi bi-trash me-1"></i> Delete
+        </button>
+      </div>
+
       <div v-if="currentMode === 'edit'">
         <button
           class="btn btn-secondary me-2"
@@ -377,6 +529,8 @@
 
 <script>
 import MarkdownIt from "markdown-it";
+import { useApiStore } from '../stores/api';
+
 const md = new MarkdownIt();
 
 export default {
@@ -384,7 +538,11 @@ export default {
     task: { type: Object, required: true },
     mainView: { type: Boolean, default: false },
     lookAsHR: { type: Boolean, default: false },
-  },
+    newTask: {
+      type: Boolean,
+      default: false,
+      required: false,
+   }},
   data() {
     return {
       currentMode: "view",
@@ -393,40 +551,45 @@ export default {
       employeeSearchQuery: '',
       showTeamResults: false,
       showEmployeeResults: false,
-      // Mock data - à remplacer par des données du store plus tard
-      availableTeams: [
-        { id: 't1', name: 'Team Dev' },
-        { id: 't2', name: 'Team Marketing' },
-        { id: 't3', name: 'Team HR' },
-        { id: 't4', name: 'Team Sales' },
-      ],
-      availableEmployees: [
-        { id: 'e1', name: 'Alexis' },
-        { id: 'e2', name: 'Valentin' },
-        { id: 'e3', name: 'Marie' },
-        { id: 'e4', name: 'Sophie' },
-        { id: 'e5', name: 'Thomas' },
-        { id: 'e6', name: 'Lucas' },
-      ],
+      availableTeams: [],
+      availableEmployees: [],
+      loadingTeams: false,
+      loadingEmployees: false,
+      loadingFiles: false,
+      uploading: false,
+      uploadProgress: 0,
+      expandedMembers: {},
     };
+  },
+  async mounted() {
+    await this.loadTeamsAndEmployees();
+    if (this.task.id) {
+      await this.loadFiles();
+    }
+    if(this.newTask) {
+      this.currentMode = 'edit';
+    }
   },
   computed: {
     isFormValid() {
+      // Simplification of validity check, adjust as needed
       return (
         this.localTask.title &&
         this.localTask.content &&
         this.localTask.label &&
-        this.localTask.status &&
-        this.localTask.files?.length > 0
+        (this.mainView || this.localTask.status) // Status is required only if not mainView
       );
     },
     selectedTeams() {
       if (!this.localTask.members) return [];
-      return this.localTask.members.filter(m => m.id && m.id[0] === 't');
+      // Teams are identified by their ID structure (e.g., starting with 't')
+      return this.localTask.members.filter(m => m.id && String(m.id).startsWith('t'));
     },
     selectedEmployees() {
       if (!this.localTask.members) return [];
-      return this.localTask.members.filter(m => m.id && m.id[0] === 'e');
+      // Employees are identified by their ID structure (e.g., starting with 'e' or being purely numeric if IDs are integers)
+      // Assuming employee IDs start with 'e' or are numeric, and team IDs start with 't'
+      return this.localTask.members.filter(m => m.id && String(m.id).startsWith('e'));
     },
     filteredTeams() {
       if (!this.teamSearchQuery.trim()) return this.availableTeams;
@@ -449,17 +612,88 @@ export default {
     toggleMode() {
       this.currentMode = this.currentMode === "view" ? "edit" : "view";
     },
+    isMemberExpanded(memberId) {
+      return Boolean(this.expandedMembers[memberId]);
+    },
+    toggleMemberCard(memberId) {
+      this.expandedMembers = {
+        ...this.expandedMembers,
+        [memberId]: !this.isMemberExpanded(memberId)
+      };
+    },
+    toggleMemberValidation(employee, isChecked) {
+      if (!this.lookAsHR) return;
+      const fallbackStatus = employee.originalStatus || 'in progress';
+      const nextStatus = isChecked ? 'validated' : fallbackStatus;
+      employee.status = nextStatus;
+      const normalizedId = String(employee.id).startsWith('e') ? employee.id : `e${employee.id}`;
+      const memberIndex = this.localTask.members.findIndex((m) => m.id === normalizedId);
+      if (memberIndex !== -1) {
+        const updatedMember = {
+          ...this.localTask.members[memberIndex],
+          status: nextStatus,
+        };
+        this.localTask.members.splice(memberIndex, 1, updatedMember);
+      }
+    },
+    async loadTeamsAndEmployees() {
+      const apiStore = useApiStore();
+      
+      try {
+        this.loadingTeams = true;
+        const teams = await apiStore.getTeams();
+        this.availableTeams = teams.map(team => ({
+          id: String(team.id).startsWith('t') ? team.id : `t${team.id}`, // Ensure team ID format consistency
+          name: team.team_name || team.name
+        }));
+      } catch (error) {
+        console.error('Failed to load teams:', error);
+        this.availableTeams = [];
+      } finally {
+        this.loadingTeams = false;
+      }
+
+      try {
+        this.loadingEmployees = true;
+        const employees = await apiStore.getEmployees();
+        this.availableEmployees = employees.map(emp => ({
+          id: String(emp.id).startsWith('e') ? emp.id : `e${emp.id}`, // Ensure employee ID format consistency
+          name: `${emp.firstname} ${emp.lastname}`
+        }));
+      } catch (error) {
+        console.error('Failed to load employees:', error);
+        this.availableEmployees = [];
+      } finally {
+        this.loadingEmployees = false;
+      }
+    },
     addMember(member) {
       if (!this.localTask.members) {
         this.localTask.members = [];
       }
       // Check if member is already added
-      const exists = this.localTask.members.some(m => m.id === member.id);
+      const normalizedId = String(member.id).startsWith('e') || String(member.id).startsWith('t')
+        ? member.id
+        : `e${member.id}`;
+      const exists = this.localTask.members.some(m => m.id === normalizedId);
       if (!exists) {
-        this.localTask.members.push({ ...member });
+        const normalizedStatus = member.status || 'to do';
+        const normalizedMember = {
+          employeeReview: '',
+          hrReview: '',
+          originalStatus: normalizedStatus,
+          status: normalizedStatus,
+          ...member,
+          id: normalizedId,
+        };
+        this.localTask.members.push(normalizedMember);
+        this.expandedMembers = {
+          ...this.expandedMembers,
+          [normalizedMember.id]: true,
+        };
       }
       // Clear search and hide results
-      if (member.id[0] === 't') {
+      if (String(member.id).startsWith('t')) {
         this.teamSearchQuery = '';
         this.showTeamResults = false;
       } else {
@@ -472,20 +706,36 @@ export default {
         this.localTask.members = this.localTask.members.filter(m => m.id !== memberId);
       }
     },
+    // FIX APPLIQUÉE ICI : Augmenter le délai pour éviter le conflit blur/mousedown
     hideTeamResultsDelayed() {
       setTimeout(() => {
         this.showTeamResults = false;
-      }, 200);
+      }, 400); 
     },
+    // FIX APPLIQUÉE ICI : Augmenter le délai pour éviter le conflit blur/mousedown
     hideEmployeeResultsDelayed() {
       setTimeout(() => {
         this.showEmployeeResults = false;
-      }, 200);
+      }, 400); 
     },
     handleSave() {
+      // Ensure members list contains only IDs for submission if the backend expects it
+      // For this example, we save the full object list
       if (this.isFormValid) {
         this.$emit("save", this.localTask);
+        console.log('Task saved:', this.localTask);
         this.currentMode = "view";
+      }
+    },
+    handleDelete() {
+      if (!this.task.id) return;
+      
+      const confirmDelete = confirm(
+        `Are you sure you want to delete "${this.task.title}"?\n\nThis action cannot be undone.`
+      );
+      
+      if (confirmDelete) {
+        this.$emit("delete", this.task.id);
       }
     },
     renderMarkdown(text) {
@@ -493,10 +743,40 @@ export default {
     },
     normalizeTask(task) {
       if (!task) return { files: [], members: [] };
+      
+      let members = [];
+      
+      // Add employees from the members array
+      if (Array.isArray(task.members)) {
+        members = task.members.map(emp => {
+          const normalizedId = String(emp.id).startsWith('e') ? emp.id : `e${emp.id}`;
+          const normalizedStatus = emp.status || 'to do';
+          return {
+            id: normalizedId,
+            name: emp.firstname && emp.lastname ? `${emp.firstname} ${emp.lastname}` : emp.name || emp.id,
+            status: normalizedStatus,
+            originalStatus: normalizedStatus,
+            employeeReview: emp.employee_review ?? emp.employeeReview ?? emp.commentEmployee ?? '',
+            hrReview: emp.hr_review ?? emp.hrReview ?? emp.commentHR ?? ''
+          };
+        });
+      }
+      
+      // Add teams from the teams array
+      if (Array.isArray(task.teams)) {
+        const teamMembers = task.teams.map(team => ({
+          id: String(team.id).startsWith('t') ? team.id : `t${team.id}`, // Ensure ID starts with 't'
+          name: team.team_name || team.name || team.id
+        }));
+        members = [...members, ...teamMembers];
+      }
+      
       const copy = {
         ...task,
+        commentEmployee: task.commentEmployee || task.employee_review || '',
+        commentHR: task.commentHR || task.hr_review || '',
         files: Array.isArray(task.files) ? [...task.files] : [],
-        members: Array.isArray(task.members) ? [...task.members] : [],
+        members: members,
       };
       if (copy.start_date)
         copy.start_date = this.normalizeDateForInput(copy.start_date);
@@ -532,25 +812,130 @@ export default {
           return "bi bi-file-earmark";
       }
     },
-    onFilesSelected(event) {
+    fileIconByMime(mime) {
+      if (!mime) return "bi bi-file-earmark";
+      if (mime.startsWith('image/')) return "bi bi-file-image text-warning";
+      if (mime === 'application/pdf') return "bi bi-file-pdf text-danger";
+      if (mime.includes('word')) return "bi bi-file-word text-primary";
+      if (mime.includes('excel') || mime.includes('spreadsheet')) return "bi bi-file-earmark-excel text-success";
+      if (mime.includes('powerpoint') || mime.includes('presentation')) return "bi bi-filetype-ppt text-danger";
+      if (mime.startsWith('text/')) return "bi bi-file-text";
+      if (mime.includes('zip')) return "bi bi-file-zip";
+      return "bi bi-file-earmark";
+    },
+    formatFileSize(bytes) {
+      if (!bytes) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+    },
+    async loadFiles() {
+      if (!this.task.id) return;
+      const apiStore = useApiStore();
+      try {
+        this.loadingFiles = true;
+        const files = await apiStore.getFilesByCompetence(this.task.id);
+        this.localTask.files = files;
+      } catch (error) {
+        console.error('Failed to load files:', error);
+        this.localTask.files = [];
+      } finally {
+        this.loadingFiles = false;
+      }
+    },
+    async onFilesSelected(event) {
       const selected = Array.from(event.target.files || []);
-      if (!this.localTask.files) this.localTask.files = [];
-      selected.forEach((f) => {
-        const ext = (f.name.split(".").pop() || "").toLowerCase();
-        this.localTask.files.push({ name: f.name, type: ext });
-      });
-      event.target.value = null;
+      if (selected.length === 0 || !this.task.id) return;
+
+      const apiStore = useApiStore();
+      this.uploading = true;
+      this.uploadProgress = 0;
+
+      try {
+        for (let i = 0; i < selected.length; i++) {
+          const file = selected[i];
+          this.uploadProgress = Math.round(((i + 1) / selected.length) * 100);
+          
+          const uploaded = await apiStore.uploadFile(this.task.id, file);
+          
+          // Add to local list
+          if (!this.localTask.files) this.localTask.files = [];
+          this.localTask.files.push(uploaded);
+        }
+        
+        // Clear file input
+        if (this.$refs.fileInput) {
+          this.$refs.fileInput.value = null;
+        }
+      } catch (error) {
+        console.error('Upload failed:', error);
+        alert('Upload failed: ' + (error.message || 'Unknown error'));
+      } finally {
+        this.uploading = false;
+        this.uploadProgress = 0;
+      }
+    },
+    async downloadFile(file) {
+      if (!file.id) return;
+      const apiStore = useApiStore();
+      try {
+        const blob = await apiStore.downloadFile(file.id);
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.original_name || file.name || 'download';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } catch (error) {
+        console.error('Download failed:', error);
+        alert('Download failed: ' + (error.message || 'Unknown error'));
+      }
+    },
+    async deleteFile(file) {
+      if (!file.id) return;
+      
+      const confirm = window.confirm(`Delete "${file.original_name || file.name}"?`);
+      if (!confirm) return;
+
+      const apiStore = useApiStore();
+      try {
+        await apiStore.deleteFile(file.id);
+        // Remove from local list
+        if (this.localTask.files) {
+          this.localTask.files = this.localTask.files.filter(f => f.id !== file.id);
+        }
+      } catch (error) {
+        console.error('Delete failed:', error);
+        alert('Delete failed: ' + (error.message || 'Unknown error'));
+      }
     },
     removeFile(file) {
-      if (!this.localTask.files) return;
-      this.localTask.files = this.localTask.files.filter(
-        (f) => f.name !== file.name
-      );
+      // Legacy method - now handled by deleteFile
+      this.deleteFile(file);
     },
   },
   watch: {
     task(newTask) {
       this.localTask = this.normalizeTask(newTask);
+      this.expandedMembers = {};
+    },
+    'localTask.members': {
+      handler(newMembers) {
+        if (!Array.isArray(newMembers)) {
+          this.expandedMembers = {};
+          return;
+        }
+        const nextState = {};
+        newMembers.forEach(member => {
+          nextState[member.id] = this.expandedMembers[member.id] ?? false;
+        });
+        this.expandedMembers = nextState;
+      },
+      deep: true,
     },
   },
 };
@@ -571,5 +956,14 @@ export default {
 }
 .hover-bg-light:hover {
   background-color: #f8f9fa;
+}
+.fade-collapse-enter-active,
+.fade-collapse-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-collapse-enter-from,
+.fade-collapse-leave-to {
+  opacity: 0;
 }
 </style>

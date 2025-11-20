@@ -116,6 +116,7 @@ const itemObj = computed(() => ({
   status: props.item?.status ?? 'to do',
   files: props.item?.files ?? [],
   members: props.item?.members ?? [],
+  teams: props.item?.teams ?? [],
   commentEmployee: props.item?.commentEmployee ?? '',
   commentHR: props.item?.commentHR ?? '',
 }))
@@ -124,7 +125,13 @@ const formattedEnd = computed(() => formatDate(itemObj.value.end_date))
 
 const renderedContentHtml = computed(() => {
   const content = itemObj.value.content
-  return content ? md.render(content) : ''
+  if (!content) return ''
+
+  let html = md.render(content)
+
+  html = html.replace(/<img[^>]*>/g, '')
+
+  return html
 })
 
 const radius = 45
@@ -140,8 +147,12 @@ const progressColor = computed(() => {
   return 'green'
 })
 
-const isHRRoute = computed(() => route.matched?.some(r => r.meta && r.meta.requiresAdmin))
-const showProgress = computed(() => userStore.isAdmin && isHRRoute.value)
+const isHRRoute = computed(() => route.matched?.some(r => r.meta && r.meta.requiresHR))
+const showProgress = computed(() => {
+  const result = userStore.isHr && isHRRoute.value
+    // Debug logs removed in cleanup
+  return result
+})
 
 function onDragStart(e) {
   e.dataTransfer.effectAllowed = 'move'
@@ -171,6 +182,8 @@ function openDetails() {
   text-overflow: ellipsis;
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  /* Standard property for newer browsers */
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   text-align: left;
 }

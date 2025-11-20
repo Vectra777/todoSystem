@@ -29,7 +29,7 @@
     <TaskForm
       v-if="selectedTask"
       :task="selectedTask"
-      :lookAsHR="true"
+      :lookAsHR="false"
       :mainView="false"
       @close="selectedTask = null"
       @save="handleSaveTask"
@@ -37,8 +37,7 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted } from 'vue'
+<script setup>import { ref, computed, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import KanbanView from '../../components/KanbanView.vue'
 import ListView from '../../components/ListView.vue'
@@ -93,10 +92,13 @@ const loginWrapperStyle = computed(() => {
 
 async function handleMoveTask({ id, toStatus }) {
   const snapshotSource = tasks.value.find((task) => String(task.id) === String(id))
+  console.log('Moving task ID:', id, 'to status:', toStatus, 'Current task data:', snapshotSource)
   const snapshot = snapshotSource ? { ...snapshotSource } : null
+  snapshot.status = toStatus
+  console.log('Snapshot before move:', JSON.stringify(snapshot))
 
   try {
-    await tasksStore.moveTask({ id, toStatus })
+    await tasksStore.moveTask(snapshot)
   } catch (err) {
     if (snapshot) {
       tasksStore.restoreTask(id, snapshot)
@@ -105,10 +107,21 @@ async function handleMoveTask({ id, toStatus }) {
   }
 }
 
-onMounted(() => {
-  tasksStore.initialize()
+onMounted(async () => {
+  // Always refresh tasks on mount so simple employees see latest data
+  await tasksStore.refresh()
   userStore.initialize()
+
+  // Log all received tasks
+  console.log('--- Tasks received ---')
+  console.log(tasks.value)
 })
+
+// Watch tasks for live updates
+watch(tasks, (newTasks) => {
+  console.log('--- Tasks updated ---')
+  console.log(newTasks)
+}, { deep: true })
 
 function handleOpenTask(task) {
   selectedTask.value = { ...task }
@@ -116,12 +129,13 @@ function handleOpenTask(task) {
 
 async function handleSaveTask(updated) {
   try {
-    await tasksStore.updateTask(updated.id, updated)
+    await tasksStore.updateTaskUser(updated)
     selectedTask.value = null
   } catch (e) {
     alert('Failed to save: ' + (e?.message || e))
   }
 }
+
 </script>
 
 <style>
