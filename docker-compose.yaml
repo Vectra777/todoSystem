@@ -1,0 +1,54 @@
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: my-backend
+    restart: unless-stopped
+    depends_on:
+      - db
+    ports:
+      - "3000:3000"        # host:container
+    environment:
+      NODE_ENV: production
+      JWT_SECRET: "005930b3680119122572f31b518676de"
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: db_todo
+      DB_USER: admin
+      DB_PASSWORD: lqksdghkjsldghqlkjshgjkdqshfqksjl
+      # Add your own env vars here, e.g. DB_URL, JWT_SECRET, etc.
+    # If your backend needs a DB, add it as another service here
+
+  db:
+    image: mysql:8.0
+    container_name: my-mysql
+    restart: unless-stopped
+    environment:
+      # Default development credentials; override with secrets in production.
+      MYSQL_DATABASE: db_todo
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: lqksdghkjsldghqlkjshgjkdqshfqksjl
+      MYSQL_ROOT_PASSWORD: lqksdghkjsldghqlkjshgjkdqshfqksjl
+    ports:
+      - "3306:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: my-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"          # host:container
+    depends_on:
+      - server
+    environment:
+      # If you need to call the backend from Vue at build time
+      # e.g. VITE_API_URL or VUE_APP_API_URL depending on your setup
+      VITE_API_URL: "http://server:3000"
+
+volumes:
+  db-data:
