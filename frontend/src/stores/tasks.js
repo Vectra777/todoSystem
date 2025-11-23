@@ -144,14 +144,24 @@ export const useTasksStore = defineStore("tasks", {
 
     // Map frontend status to backend status
     mapStatusToBackend(frontendStatus) {
+      if (!frontendStatus) return 'To Do';
+      const normalized = frontendStatus
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replace(/[_-]+/g, ' ');
       const statusMap = {
         'to do': 'To Do',
+        'todo': 'To Do',
         'in progress': 'In Progress',
         'doing': 'In Progress',
         'finished': 'Completed',
-        'validated': 'Validated'
+        'completed': 'Completed',
+        'done': 'Completed',
+        'validated': 'Validated',
+        'approved': 'Validated'
       };
-      return statusMap[frontendStatus] || 'To Do';
+      return statusMap[normalized] || 'To Do';
     },
 
     // Calculate progress percentage based on status

@@ -41,7 +41,7 @@ app.get('/monitor', monitorAuth, monitorMiddleware.pageRoute);
 
 
 const corsOptions = {
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:8080'],
   credentials: true
 };
 
@@ -124,7 +124,8 @@ require('./app/routes/user_task.route.js')(app);
 require('./app/routes/search.route.js')(app);
 require('./app/routes/file.route.js')(app);
 
-const PORT = 8080;
+// Honor PORT env var; default to 3000 to align with docker-compose
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });

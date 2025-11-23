@@ -6,19 +6,23 @@ services:
     container_name: my-backend
     restart: unless-stopped
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
-      - "3000:3000"        # host:container
+      # Expose backend on host 3000 -> container 3000
+      - "3000:3000"
     environment:
       NODE_ENV: production
-      JWT_SECRET: "005930b3680119122572f31b518676de"
+      PORT: 3000
+      JWT_SECRET: 005930b3680119122572f31b518676de
+      MONITOR_TOKEN: choose-a-strong-token
       DB_HOST: db
       DB_PORT: 3306
       DB_NAME: db_todo
       DB_USER: admin
       DB_PASSWORD: lqksdghkjsldghqlkjshgjkdqshfqksjl
-      # Add your own env vars here, e.g. DB_URL, JWT_SECRET, etc.
-    # If your backend needs a DB, add it as another service here
+
+
 
   db:
     image: mysql:8.0
@@ -31,7 +35,14 @@ services:
       MYSQL_PASSWORD: lqksdghkjsldghqlkjshgjkdqshfqksjl
       MYSQL_ROOT_PASSWORD: lqksdghkjsldghqlkjshgjkdqshfqksjl
     ports:
-      - "3306:3306"
+      # Expose MySQL on host 3307 -> container 3306 (default MySQL port)
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
     volumes:
       - db-data:/var/lib/mysql
 
@@ -39,16 +50,21 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        # Frontend API base (backend is exposed on host 3000 with /api prefix)
+        VITE_API_URL: "http://localhost:3000/api"
     container_name: my-frontend
     restart: unless-stopped
     ports:
-      - "8080:80"          # host:container
+      # Serve built frontend via Nginx (container uses port 80)
+      - "8080:80"
+    volumes:
+      # Use project-level Nginx config (in server folder) so no manual edits needed
+      - ./server/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - server
     environment:
-      # If you need to call the backend from Vue at build time
-      # e.g. VITE_API_URL or VUE_APP_API_URL depending on your setup
-      VITE_API_URL: "http://server:3000"
-
+      # Browser must reach backend via host; include /api prefix
+      VITE_API_URL: "http://localhost:3000/api"
 volumes:
   db-data:

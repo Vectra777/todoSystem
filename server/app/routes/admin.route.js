@@ -21,6 +21,7 @@ function localOnlyOrToken(req, res, next) {
 
 // Admin panel form (very small HTML)
 router.get('/admin-panel', localOnlyOrToken, (req, res) => {
+  const tokenQuery = req.query && req.query.token ? `?token=${encodeURIComponent(req.query.token)}` : '';
   res.setHeader('Content-Type', 'text/html');
   res.send(`
     <!doctype html>
@@ -38,7 +39,7 @@ router.get('/admin-panel', localOnlyOrToken, (req, res) => {
       <body>
         <div class="card">
           <h2>Create Company and first Admin</h2>
-          <form method="POST" action="/admin-panel/create" style="margin-right:20px">
+          <form method="POST" action="/admin-panel/create${tokenQuery}" style="margin-right:20px">
             <label>First name</label>
             <input name="firstname" required />
             <label>Last name</label>
