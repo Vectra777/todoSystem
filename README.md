@@ -43,13 +43,15 @@ The application consists of a **Vue.js frontend** and a planned **Node.js/Expres
 
 ### Frontend
 - Framework: **Vue.js 3**
-- State Management: **Pinia / Vuex**
+- State Management: **Pinia**
 - Routing: **Vue Router**
 - UI: **Bootstrap** and **Vanilla**
 - Authentication: **JWT tokens**
 
 ### Backend
-- ...
+- Framework: **expressjs, nodejs**
+- database: **mysql**
+- containerization: **docker**
 
 ---
 
@@ -77,7 +79,7 @@ The application consists of a **Vue.js frontend** and a planned **Node.js/Expres
 |------------|-------|------------|--------|
 | **1** | Oct 6, 2025 | Documentation, mockups, DB schema | ✅ |
 | **2** | Nov 3, 2025 | Frontend development (Vue.js) | ✅ |
-| **3** | Dec 8, 2025 | Backend (API, auth, integration) & final presentation | ⏳ |
+| **3** | Dec 8, 2025 | Backend (API, auth, integration) & final presentation | ✅ |
 
 ---
 
@@ -87,3 +89,5 @@ The application consists of a **Vue.js frontend** and a planned **Node.js/Expres
 - Node.js ≥ 18
 - npm or yarn
 - Git
+- docker / compose
+- mysql
