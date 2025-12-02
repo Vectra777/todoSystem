@@ -1,7 +1,52 @@
 const express = require('express');
 const router = express.Router();
+const nodemailer = require('nodemailer'); 
 const companyController = require('../controllers/company.controller');
 const employeeController = require('../controllers/employee.controller');
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,        
+    pass: process.env.GMAIL_APP_PASSWORD 
+  }
+});
+
+  async function sendWelcomeEmail(toEmail, firstName, password) {
+  try {
+    const passwordHtml = password 
+      ? `<li><strong>Password:</strong> ${password}</li>` 
+      : '<li><strong>Password:</strong> <em>password</em></li>';
+
+    const mailOptions = {
+      from: `"Admin Panel" <${process.env.GMAIL_USER}>`,
+      to: toEmail,
+      subject: 'Welcome to TODO Platform!',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+          <h2>Hello ${firstName},</h2>
+          <p>Your administrator account has been successfully created.</p>
+          
+          <p>Here are your login credentials:</p>
+          <ul>
+            <li><strong>Email:</strong> ${toEmail}</li>
+            ${passwordHtml}
+          </ul>
+
+          <p>You can now log in to the dashboard.</p>
+          <br>
+          <hr style="border: none; border-top: 1px solid #eee;" />
+          <p style="color: #888; font-size: 12px;">This is an automated message.</p>
+        </div>
+      `
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Email sent successfully: %s', info.messageId);
+  } catch (error) {
+    console.error("Error sending email:", error);
+  }
+}
 
 // Simple protection: allow only localhost unless MONITOR_TOKEN is set
 function localOnlyOrToken(req, res, next) {
@@ -63,17 +108,40 @@ router.post('/admin-panel/create', localOnlyOrToken, express.urlencoded({ extend
   try {
     const company = await companyController.createCompany(req, res);
     
+
+    if (res.headersSent && res.statusCode >= 400) {
+        return;
+    }
+
     if (company && company.id) {
         req.body.company_id = company.id;
     } else {
-        return res.status(500).send('Internal error: Failed to retrieve the newly created Company ID.');
+      if (!res.headersSent) {
+            return res.status(500).send('Internal error: Failed to retrieve the newly created Company ID.');
+        }
+        return;
     }
+
     await employeeController.createAdmin(req, res);
+
+    if (res.headersSent && res.statusCode >= 400) {
+        return;
+    }
+    
+    const { email, firstname, password } = req.body;
+    if (email && firstname) {
+        sendWelcomeEmail(email, firstname, password); 
+    }
     
   } catch (err) {
-    res.status(500).send('Internal error: ' + (err.message || 'unknown'));
+    console.error(err);
+    if (!res.headersSent) {
+        res.status(500).send('Internal error: ' + (err.message || 'unknown'));
+    }
   }
 });
-module.exports = (app) => {
-  app.use('/', router);
-};
+ module.exports = (app) => {
+
+app.use('/', router);
+
+}; 
