@@ -347,7 +347,7 @@ async function sendTaskNotificationEmail(toEmail, firstName, taskTitle, descript
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
           <h2>Hello ${firstName},</h2>
-          <p>A new task/competence has been assigned to you.</p>
+          <p>A new competence has been assigned to you.</p>
           
           <div style="background-color: #f9f9f9; padding: 15px; border-left: 4px solid #007bff; margin: 20px 0;">
             <h3 style="margin-top: 0;">${taskTitle}</h3>
@@ -423,6 +423,7 @@ exports.create = async (req, res) => {
                         team_id: member.id,
                         competence_id: competence.id
                     });
+                    
 
                     const teamMembers = await TeamMember.findAll({
                         where: { team_id: member.id },
@@ -437,6 +438,13 @@ exports.create = async (req, res) => {
                             const email = tm.employee.email.toLowerCase();
 
                             if (!notifiedEmails.has(email)) {
+
+                                await UserTask.create({
+                                    competence_id: competence.id,      
+                                    employee_id: tm.employee.id,        
+                                    status: 'To Do'
+                                });
+
                                 await sendTaskNotificationEmail(
                                     tm.employee.email, 
                                     tm.employee.firstname, 
@@ -480,7 +488,8 @@ exports.update = async (req, res) => {
     
     try {
         const id = req.params.id;
-
+        const notifiedEmails = new Set();
+        
         // AUTH CHECK: Verify ownership before updating
         const existingCompetence = await Competence.findByPk(id);
         if (!existingCompetence || existingCompetence.company_id !== callerCompanyId) {
@@ -524,15 +533,47 @@ exports.update = async (req, res) => {
                             status: 'To Do'
                         });
                     }
-                } else if (member.id.startsWith('t')) {
+               } else if (member.id.startsWith('t')) {
                     const teamId = member.id;
                     
                     await TeamTask.findOrCreate({
                         where: {
                             team_id: teamId,
-                            competence_id: id
+                            competence_id: id 
                         }
                     });
+
+                    const teamMembers = await TeamMember.findAll({
+                        where: { team_id: teamId },
+                        include: [{
+                            model: Employee,
+                            attributes: ['id', 'firstname', 'email']
+                        }]
+                    });
+
+                    for (const tm of teamMembers) {
+                        if (tm.employee && tm.employee.email) {
+                            const email = tm.employee.email.toLowerCase();
+
+                            if (!notifiedEmails.has(email)) {
+                                
+                                await UserTask.create({
+                                    competence_id: id,
+                                    employee_id: tm.employee.id,
+                                    status: 'To Do'
+                                });
+
+                                await sendTaskNotificationEmail(
+                                    tm.employee.email, 
+                                    tm.employee.firstname, 
+                                    existingCompetence.title, 
+                                    existingCompetence.description
+                                );
+
+                                notifiedEmails.add(email);
+                            }
+                        }
+                    }
                 }
             }
         }
