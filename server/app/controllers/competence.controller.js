@@ -9,6 +9,7 @@ const Team = db.teams;
 const TeamMember = db.team_members;
 const File = db.files;
 const { Op } = require('sequelize');
+const { marked } = require('marked');
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -340,6 +341,7 @@ exports.getProgress = async (req, res) => {
 
 async function sendTaskNotificationEmail(toEmail, firstName, taskTitle, description) {
   try {
+    const descriptionHtml = description ? marked.parse(description) : 'No description provided.';
     const mailOptions = {
       from: `"Task Manager" <${process.env.GMAIL_USER}>`,
       to: toEmail,
@@ -351,7 +353,9 @@ async function sendTaskNotificationEmail(toEmail, firstName, taskTitle, descript
           
           <div style="background-color: #f9f9f9; padding: 15px; border-left: 4px solid #007bff; margin: 20px 0;">
             <h3 style="margin-top: 0;">${taskTitle}</h3>
-            <p style="color: #555;">${description || 'No description provided.'}</p>
+            <div style="color: #555;">
+              ${descriptionHtml}
+            </div>
           </div>
 
           <p>Please check your dashboard for more details.</p>
