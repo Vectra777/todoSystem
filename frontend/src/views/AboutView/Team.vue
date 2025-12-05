@@ -58,8 +58,11 @@
 <script>
 import { useThemeStore } from '../../stores/theme'
 import { mapStores } from 'pinia'
-
+import antoineImg from '../../assets/antoine.jpg'
+import alexisImg from '../../assets/alexis.jpg'
+import valentinImg from '../../assets/valentin.jpg'
 export default {
+
   name: 'Team',
   data() {
     return {
@@ -68,7 +71,7 @@ export default {
           id: 1,
           name: 'Antoine Mroczko',
           title: 'Database Architect, API Designer',
-          avatar: 'https://media.licdn.com/dms/image/v2/D4E03AQEMx8eZbEi44A/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1727008909101?e=1762992000&v=beta&t=mnriv8UvwSOYrq6JUbHOH8WnY42mal_gN2YO6pCWPuo',
+          avatar: antoineImg,
           bio: 'Visionary leader focused on aligning HR tech with business strategy.',
           color: '#4f8cff'
         },
@@ -76,7 +79,7 @@ export default {
           id: 2,
           name: 'Valentin Belougne',
           title: 'Authentication Specialist, UI/UX Developer',
-          avatar: 'https://media.licdn.com/dms/image/v2/D4E03AQGMMnfTi_AciQ/profile-displayphoto-shrink_100_100/B4EZadOjN3H4AY-/0/1746394560378?e=1762992000&v=beta&t=r7rs-6jdJEcysoFD1aUjPPgqNvmCRR8X_AEcScgMuCI',
+          avatar: valentinImg,
           bio: 'Expert in B2B authentification and user-friendly interfaces.',
           color: '#ff6ec4'
         },
@@ -84,7 +87,7 @@ export default {
           id: 3,
           name: 'Alexis Demont',
           title: 'Frontend Developer, UI/UX Designer',
-          avatar: 'https://media.licdn.com/dms/image/v2/D4E03AQGbI30widTPCQ/profile-displayphoto-shrink_100_100/profile-displayphoto-shrink_100_100/0/1713363313539?e=1762992000&v=beta&t=Onn7SAjoE7L4SKBlQq_khD4ujtIYxOMt-kcdex4agro',
+          avatar: alexisImg,
           bio: 'Expert in API integration and responsive design.',
           color: '#50fa7b'
         }

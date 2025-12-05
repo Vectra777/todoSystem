@@ -1,5 +1,6 @@
 const db = require("../models");
 const { ensureAuthenticated } = require('../authentication/utils');
+const nodemailer = require('nodemailer');
 const Competence = db.competences;
 const UserTask = db.user_tasks;
 const TeamTask = db.team_tasks;
@@ -8,6 +9,15 @@ const Team = db.teams;
 const TeamMember = db.team_members;
 const File = db.files;
 const { Op } = require('sequelize');
+const { marked } = require('marked');
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,        
+    pass: process.env.GMAIL_APP_PASSWORD 
+  }
+});
 
 // --- READ/SEARCH FUNCTIONS ---
 
@@ -329,53 +339,130 @@ exports.getProgress = async (req, res) => {
     }
 };
 
+async function sendTaskNotificationEmail(toEmail, firstName, taskTitle, description) {
+  try {
+    const descriptionHtml = description ? marked.parse(description) : 'No description provided.';
+    const mailOptions = {
+      from: `"Task Manager" <${process.env.GMAIL_USER}>`,
+      to: toEmail,
+      subject: 'New Task Assigned',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+          <h2>Hello ${firstName},</h2>
+          <p>A new competence has been assigned to you.</p>
+          
+          <div style="background-color: #f9f9f9; padding: 15px; border-left: 4px solid #007bff; margin: 20px 0;">
+            <h3 style="margin-top: 0;">${taskTitle}</h3>
+            <div style="color: #555;">
+              ${descriptionHtml}
+            </div>
+          </div>
+
+          <p>Please check your dashboard for more details.</p>
+          <br>
+          <p style="color: #888; font-size: 12px;">Automated notification.</p>
+        </div>
+      `
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Task notification sent to %s (%s)', toEmail, info.messageId);
+  } catch (error) {
+    console.error("Error sending task email:", error);
+  }
+}
+
 // --- WRITE/MODIFY FUNCTIONS ---
 
 exports.create = async (req, res) => {
     const decodedUser = ensureAuthenticated(req, res);
     if (!decodedUser) return;
-    // Retrieve the company ID from the authenticated user
     const callerCompanyId = decodedUser.company_id;
     
     try {
         if (!req.body.title) {
-            res.status(400).send({
-                message: "Title is required!",
-            });
+            res.status(400).send({ message: "Title is required!" });
             return;
         }
 
-        // Create a Competence (ASSIGNING company_id)
         const competence = await Competence.create({
             title: req.body.title,
             description: req.body.description || "",
             start_date: req.body.start_date || null,
             end_date: req.body.end_date || null,
             label: req.body.label || "",
-            company_id: callerCompanyId // ASSIGN COMPANY ID
+            company_id: callerCompanyId
         });
 
-        // Process members 
         if (req.body.members && Array.isArray(req.body.members)) {
-            const memberPromises = req.body.members.map(async (member) => {
+            
+            const notifiedEmails = new Set();
+
+            for (const member of req.body.members) {
+                
                 if (member.id.startsWith('e')) {
                     await UserTask.create({
                         competence_id: competence.id,
                         employee_id: member.id,
                         status: 'To Do'
                     });
+
+                    const employee = await Employee.findByPk(member.id);
+                    if (employee && employee.email) {
+                        const email = employee.email.toLowerCase();
+                        
+                        if (!notifiedEmails.has(email)) {
+                            await sendTaskNotificationEmail(
+                                employee.email, 
+                                employee.firstname, 
+                                competence.title, 
+                                competence.description
+                            );
+                            notifiedEmails.add(email);
+                        }
+                    }
+
                 } else if (member.id.startsWith('t')) {
                     await TeamTask.create({
                         team_id: member.id,
                         competence_id: competence.id
                     });
+                    
+
+                    const teamMembers = await TeamMember.findAll({
+                        where: { team_id: member.id },
+                        include: [{
+                            model: Employee,
+                            attributes: ['id', 'firstname', 'email']
+                        }]
+                    });
+
+                    for (const tm of teamMembers) {
+                        if (tm.employee && tm.employee.email) {
+                            const email = tm.employee.email.toLowerCase();
+
+                            if (!notifiedEmails.has(email)) {
+
+                                await UserTask.create({
+                                    competence_id: competence.id,      
+                                    employee_id: tm.employee.id,        
+                                    status: 'To Do'
+                                });
+
+                                await sendTaskNotificationEmail(
+                                    tm.employee.email, 
+                                    tm.employee.firstname, 
+                                    competence.title, 
+                                    competence.description
+                                );
+                                notifiedEmails.add(email);
+                            }
+                        }
+                    }
                 }
-            });
-
-            await Promise.all(memberPromises);
+            }
         }
-
-        // Fetch the created competence with its members
+        
         const result = await Competence.findByPk(competence.id, {
             include: [{
                 model: Employee,
@@ -389,6 +476,7 @@ exports.create = async (req, res) => {
 
         res.send(result);
     } catch (err) {
+        console.error(err);
         res.status(500).send({
             message: err.message || "Some error occurred while creating the Competence.",
         });
@@ -404,7 +492,8 @@ exports.update = async (req, res) => {
     
     try {
         const id = req.params.id;
-
+        const notifiedEmails = new Set();
+        
         // AUTH CHECK: Verify ownership before updating
         const existingCompetence = await Competence.findByPk(id);
         if (!existingCompetence || existingCompetence.company_id !== callerCompanyId) {
@@ -448,15 +537,47 @@ exports.update = async (req, res) => {
                             status: 'To Do'
                         });
                     }
-                } else if (member.id.startsWith('t')) {
+               } else if (member.id.startsWith('t')) {
                     const teamId = member.id;
                     
                     await TeamTask.findOrCreate({
                         where: {
                             team_id: teamId,
-                            competence_id: id
+                            competence_id: id 
                         }
                     });
+
+                    const teamMembers = await TeamMember.findAll({
+                        where: { team_id: teamId },
+                        include: [{
+                            model: Employee,
+                            attributes: ['id', 'firstname', 'email']
+                        }]
+                    });
+
+                    for (const tm of teamMembers) {
+                        if (tm.employee && tm.employee.email) {
+                            const email = tm.employee.email.toLowerCase();
+
+                            if (!notifiedEmails.has(email)) {
+                                
+                                await UserTask.create({
+                                    competence_id: id,
+                                    employee_id: tm.employee.id,
+                                    status: 'To Do'
+                                });
+
+                                await sendTaskNotificationEmail(
+                                    tm.employee.email, 
+                                    tm.employee.firstname, 
+                                    existingCompetence.title, 
+                                    existingCompetence.description
+                                );
+
+                                notifiedEmails.add(email);
+                            }
+                        }
+                    }
                 }
             }
         }

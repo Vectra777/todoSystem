@@ -1,10 +1,50 @@
 const db = require('../models');
 const { ensureAuthenticated } = require('../authentication/utils');
+const nodemailer = require('nodemailer');
 const TeamMember = db.team_members;
 const Employee = db.employees;
 const Team = db.teams;
 const TeamTask = db.team_tasks;
 const UserTask = db.user_tasks;
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,        
+    pass: process.env.GMAIL_APP_PASSWORD 
+  }
+});
+
+async function sendTeamAssignmentEmail(toEmail, firstName, teamName, role) {
+  try {
+    const mailOptions = {
+      from: `"HR System" <${process.env.GMAIL_USER}>`,
+      to: toEmail,
+      subject: 'Update - New Team Assignment',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+          <h2>Hello ${firstName},</h2>
+          <p>You have been added to a new team!</p>
+          
+          <div style="background-color: #f0f8ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="margin: 5px 0;"><strong>Team:</strong> <span style="color: #0056b3;">${teamName}</span></p>
+            <p style="margin: 5px 0;"><strong>Role:</strong> ${role}</p>
+          </div>
+
+          <p>You can verify your tasks on your dashboard.</p>
+          <br>
+          <hr style="border: none; border-top: 1px solid #eee;" />
+          <p style="color: #888; font-size: 12px;">This is an automated message.</p>
+        </div>
+      `
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Team notification email sent: %s', info.messageId);
+  } catch (error) {
+    console.error("Error sending team email:", error);
+  }
+}
 
 function getCompanyContext(req, res) {
     const decodedUser = ensureAuthenticated(req, res);
@@ -125,6 +165,15 @@ exports.create = async (req, res) => {
                 }
             ]
         });
+
+        if (result && result.employee && result.team) {
+            sendTeamAssignmentEmail(
+                result.employee.email, 
+                result.employee.firstname, 
+                result.team.team_name,
+                result.role
+            );
+        }
 
         res.send(result);
     } catch (err) {
