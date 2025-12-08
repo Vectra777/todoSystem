@@ -7,10 +7,10 @@ INSERT INTO companies (id, name) VALUES
 
 -- Employees
 INSERT INTO employees (id, firstname, lastname, email, password_hash, role, is_active, company_id) VALUES
-('e1', 'Johnny', 'Smith', 'john.smith@company.com', 'hash123', 'admin', true, 1),
-('e2', 'Emily', 'Johnson', 'emily.johnson@company.com', 'hash124', 'employee', true, 1),
-('e3', 'Michael', 'Brown', 'michael.brown@company.com', 'hash125', 'employee', true, 1),
-('e4', 'Sarah', 'Wilson', 'sarah.wilson@company.com', 'hash126', 'employee', true, 1);
+('e1', 'Antoine', 'Mroczko', 'antoine.mroczko@efrei.net', 'hash123', 'admin', true, 1),
+('e2', 'Alexis', 'Demont', 'alexis.demont@efrei.net', 'hash124', 'employee', true, 1),
+('e3', 'Valentin', 'Belougne', 'valentin.belougne@efrei.net', 'hash125', 'employee', true, 1),
+('e4', 'Sarah', 'Wilson', 'crafiouse@gmail.com', 'hash126', 'employee', true, 1);
 
 -- Teams
 INSERT INTO teams (id, team_name, description, company_id) VALUES
@@ -70,13 +70,6 @@ INSERT INTO user_tasks (competence_id, employee_id, status, employee_review, hr_
 (2, 'e3', 'Completed', 'Successfully completed UX project', 'Excellent work'),
 (3, 'e1', 'In Progress', 'Creating new database queries', NULL),
 (4, 'e4', 'To Do', NULL, NULL);
-
--- Files
-INSERT INTO files (id, competence_id, extension, name) VALUES
-(1, 1, 'pdf', 'vue_certification.pdf'),
-(2, 2, 'png', 'ux_mockup.png'),
-(3, 2, 'fig', 'design_system.fig'),
-(4, 3, 'sql', 'database_schema.sql');
 
 -- Team Tasks
 INSERT INTO team_tasks (team_id, competence_id, created_at) VALUES
