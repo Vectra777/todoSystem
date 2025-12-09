@@ -17,6 +17,7 @@
           :all-competences="tasks"
           :focus-team-id="selectedTeamId"
           :visible-team-ids="visibleTeamIds"
+          @member-removed="handleMemberRemoved"
         />
 
         <template v-if="!selectedEmployee">
@@ -492,6 +493,16 @@ async function handleMemberAdded(data) {
   invalidateEmployeeTeams(employeeId)
 
   if (selectedEmployee.value?.id === employeeId) {
+    selectedEmployeeTeams.value = await ensureEmployeeTeams(employeeId, { forceRefresh: true })
+  }
+}
+
+async function handleMemberRemoved({ teamId, employeeId }) {
+  if (!employeeId) return
+
+  invalidateEmployeeTeams(employeeId)
+
+  if (selectedEmployee.value && selectedEmployee.value.id === employeeId) {
     selectedEmployeeTeams.value = await ensureEmployeeTeams(employeeId, { forceRefresh: true })
   }
 }

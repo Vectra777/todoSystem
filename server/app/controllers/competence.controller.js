@@ -536,6 +536,7 @@ exports.update = async (req, res) => {
                             employee_id: employeeId,
                             status: 'To Do'
                         });
+                        currentEmployeeIds.add(employeeId);
                     }
                } else if (member.id.startsWith('t')) {
                     const teamId = member.id;
@@ -557,24 +558,29 @@ exports.update = async (req, res) => {
 
                     for (const tm of teamMembers) {
                         if (tm.employee && tm.employee.email) {
+                            const employeeId = tm.employee.id;
+                            newEmployeeIds.add(employeeId);
                             const email = tm.employee.email.toLowerCase();
 
-                            if (!notifiedEmails.has(email)) {
+                            if (!currentEmployeeIds.has(employeeId)) {
                                 
                                 await UserTask.create({
                                     competence_id: id,
-                                    employee_id: tm.employee.id,
+                                    employee_id: employeeId,
                                     status: 'To Do'
                                 });
 
-                                await sendTaskNotificationEmail(
-                                    tm.employee.email, 
-                                    tm.employee.firstname, 
-                                    existingCompetence.title, 
-                                    existingCompetence.description
-                                );
-
-                                notifiedEmails.add(email);
+                                if (!notifiedEmails.has(email)) {
+                                    await sendTaskNotificationEmail(
+                                        tm.employee.email, 
+                                        tm.employee.firstname, 
+                                        existingCompetence.title, 
+                                        existingCompetence.description
+                                    );
+                                    notifiedEmails.add(email);
+                                }
+                                
+                                currentEmployeeIds.add(employeeId);
                             }
                         }
                     }

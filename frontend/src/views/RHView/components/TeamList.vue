@@ -160,6 +160,8 @@ const props = defineProps({
   }
 })
 
+const emit = defineEmits(['member-removed'])
+
 const apiStore = useApiStore()
 const openTeamId = ref(null)
 const memberSearchQuery = ref('')
@@ -357,6 +359,8 @@ async function removeMember(teamId, employeeId) {
       team.hasLoaded = false
       await fetchTeamData(team)
     }
+    
+    emit('member-removed', { teamId, employeeId })
   } catch (error) {
     console.error('Failed to remove member:', error)
     alert('Failed to remove member from team: ' + (error.message || 'Unknown error'))
